@@ -460,19 +460,8 @@ This guide helps you run the generated PyAirbyte script to move data from `{sour
     return instructions
 
 # --- MCP Configuration Handler ---
-@mcp.configure()
-async def configure_server(config: Dict[str, Any]) -> None:
-    """Handle configuration from MCP client."""
-    logging.info("Received configuration from MCP client")
-    
-    # Extract OpenAI API key from configuration (vector_store_id comes from environment)
-    openai_api_key = config.get("openai_api_key")
-    
-    if openai_api_key:
-        initialize_openai_client(openai_api_key)
-        logging.info("OpenAI client configured from MCP client configuration")
-    else:
-        logging.warning("No OpenAI API key provided in MCP configuration")
+# Note: FastMCP doesn't have a configure decorator, so we rely on environment variables
+# The OpenAI client is initialized from environment variables at startup
 
 # --- MCP Tool Definition ---
 @mcp.tool()
