@@ -521,13 +521,5 @@ async def generate_pyairbyte_pipeline(
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
-    # This allows running the server directly for testing, e.g., `python mcp_server.py`
-    # However, Cursor will typically manage the process via the config file.
-    # Ensure required env vars (OPENAI_API_KEY, VECTOR_STORE_ID) are set when running directly.
-    if not os.getenv("OPENAI_API_KEY"):
-        print("WARNING: OPENAI_API_KEY environment variable not set.")
-    if not os.getenv("VECTOR_STORE_ID"):
-        print("WARNING: VECTOR_STORE_ID environment variable not set.")
-
-    print("Starting PyAirbyte MCP Server directly...")
-    mcp.run() # Runs the stdio server by default when run directly
+    logging.info("Starting PyAirbyte MCP Server...")
+    mcp.run()
