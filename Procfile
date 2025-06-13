@@ -1,1 +1,1 @@
-web: cd pyairbyte-mcp-server && python main.py 
+web: python main.py 
