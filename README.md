@@ -20,7 +20,7 @@ There are two ways to use this MCP server:
 
 ### Option 1: Hosted Server (Recommended for most users)
 
-Connect to the hosted server on Heroku - no local setup required.
+Connect to the hosted server on Heroku. You need to provide your OpenAI API key via MCP environment variables.
 
 #### For Cline (VS Code Extension)
 
@@ -32,6 +32,9 @@ Add this configuration to your Cline MCP settings:
     "pyairbyte-mcp": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      },
       "description": "Hosted PyAirbyte MCP server for generating pipelines"
     }
   }
@@ -48,6 +51,9 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
     "pyairbyte-mcp": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      },
       "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
     }
   }
@@ -101,8 +107,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 #### Hosted Server
 - The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
 - The `@modelcontextprotocol/server-fetch` package handles the HTTP-to-MCP protocol translation
-- No additional configuration parameters are needed as the server uses environment variables
-- The OpenAI API key is securely configured as an environment variable on the server
+- You must provide your OpenAI API key via MCP environment variables
 
 #### Local Server
 - Requires Python and the necessary dependencies installed locally
@@ -114,7 +119,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 
 The server uses environment variables from two sources:
 
-#### MCP Configuration (Required for local server)
+#### MCP Configuration (Required for both remote and local servers)
 - **OPENAI_API_KEY**: OpenAI API key for accessing GPT models and file search functionality
 
 #### .env File (Optional)
@@ -123,7 +128,7 @@ The server uses environment variables from two sources:
 
 ### Security Note
 
-When using the hosted server, the OpenAI API key is securely configured as an environment variable on the server, so no sensitive information needs to be included in your client configuration. For local deployments, only the OpenAI API key needs to be passed via MCP configuration, while other optional settings can be configured in a .env file.
+Both hosted and local servers now require you to provide your own OpenAI API key via MCP environment variables. This ensures better security and cost control. For local deployments, additional optional settings can be configured in a .env file.
 
 ---
 

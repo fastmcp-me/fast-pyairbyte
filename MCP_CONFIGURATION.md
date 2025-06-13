@@ -1,6 +1,6 @@
 # MCP Configuration Guide
 
-This guide explains how to configure the PyAirbyte MCP Server to use your OpenAI API key through the MCP configuration file.
+This guide explains how to configure the PyAirbyte MCP Server. Both local and remote servers now require you to provide your own OpenAI API key when using the tools.
 
 ## Configuration File Location
 
@@ -10,8 +10,24 @@ The MCP configuration file is typically located at:
 
 ## Configuration Format
 
-Add the following configuration to your MCP settings file:
+Both remote/hosted and local servers now use the same configuration approach - you must provide your OpenAI API key via MCP environment variables.
 
+### For Remote/Hosted Server:
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### For Local Server:
 ```json
 {
   "mcpServers": {
@@ -28,12 +44,10 @@ Add the following configuration to your MCP settings file:
 
 ## Environment Variables
 
-The server uses environment variables from two sources:
-
-### MCP Configuration (Required)
+### MCP Configuration (Required for both remote and local)
 - `OPENAI_API_KEY`: Your OpenAI API key for accessing GPT models and file search functionality
 
-### .env File (Optional)
+### .env File (Optional, local server only)
 - `VECTOR_STORE_ID`: OpenAI Vector Store ID for file search capabilities (if you have uploaded PyAirbyte documentation)
 - `PORT`: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
 

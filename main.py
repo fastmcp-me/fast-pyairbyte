@@ -27,8 +27,7 @@ mcp = FastMCP(
 )
 
 # --- OpenAI Client ---
-# Initialize as None, will be set when MCP server receives configuration
-openai_client = None
+# No global OpenAI client - will be created per request with user-provided API key
 
 # Get VECTOR_STORE_ID from environment variables (required for file search)
 VECTOR_STORE_ID = os.environ.get("VECTOR_STORE_ID")
@@ -37,33 +36,20 @@ if VECTOR_STORE_ID:
 else:
     logging.warning("VECTOR_STORE_ID not set in environment variables. File search will be unavailable.")
 
-def initialize_openai_client(api_key: str):
-    """Initialize OpenAI client with provided API key."""
-    global openai_client
+def create_openai_client(api_key: str) -> Optional[OpenAI]:
+    """Create OpenAI client with provided API key."""
     try:
-        openai_client = OpenAI(api_key=api_key)
-        logging.info("OpenAI client initialized successfully")
-        return True
+        client = OpenAI(api_key=api_key)
+        logging.info("OpenAI client created successfully")
+        return client
     except Exception as e:
-        logging.error(f"Failed to initialize OpenAI client: {e}")
-        openai_client = None
-        return False
+        logging.error(f"Failed to create OpenAI client: {e}")
+        return None
 
 # --- MCP Configuration Handler ---
-# FastMCP doesn't have a configure decorator, so we initialize from environment variables
-# The OpenAI API key should be provided via environment variables in the MCP configuration
-# The VECTOR_STORE_ID should be provided via .env file
-
-# Try to initialize OpenAI client from environment variables (set via MCP configuration)
-env_api_key = os.environ.get("OPENAI_API_KEY")
-if env_api_key:
-    success = initialize_openai_client(env_api_key)
-    if success:
-        logging.info("Initialized OpenAI client from MCP configuration environment variables")
-    else:
-        logging.error("Failed to initialize OpenAI client from MCP configuration environment variables")
-else:
-    logging.warning("OPENAI_API_KEY environment variable not set in MCP configuration. OpenAI functionality will be unavailable.")
+# The server now requires each client to provide their own OpenAI API key
+# No global initialization - API key must be provided with each request
+logging.info("Server configured to require OpenAI API key from each client request")
 
 # --- Helper Functions ---
 
@@ -116,7 +102,7 @@ def get_connector_config_keys(connector_name: str, connector_type: str, catalog_
         return ["config_key_1", "config_key_2"] # Generic fallback
 
 
-async def query_file_search(query: str, vector_store_id: str) -> str:
+async def query_file_search(query: str, vector_store_id: str, openai_client: OpenAI) -> str:
     """Uses OpenAI File Search (via Responses API) to get context."""
     if not openai_client or not vector_store_id:
         logging.warning("OpenAI client or Vector Store ID not available. Skipping file search.")
@@ -489,6 +475,22 @@ async def generate_pyairbyte_pipeline(
     """
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
     ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
+
+    # Get OpenAI API key from environment variables (set via MCP configuration)
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_api_key:
+        error_msg = "OPENAI_API_KEY environment variable not set. Please configure it in your MCP settings."
+        logging.error(error_msg)
+        ctx.error(error_msg)
+        return {"error": error_msg}
+
+    # Create OpenAI client with API key from environment
+    openai_client = create_openai_client(openai_api_key)
+    if not openai_client:
+        error_msg = "Failed to initialize OpenAI client with provided API key. Please check your API key."
+        logging.error(error_msg)
+        ctx.error(error_msg)
+        return {"error": error_msg}
 
     output_to_dataframe = destination_name.lower() == "dataframe"
 
