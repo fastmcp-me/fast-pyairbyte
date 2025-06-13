@@ -522,4 +522,4 @@ async def generate_pyairbyte_pipeline(
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    mcp.run()
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
