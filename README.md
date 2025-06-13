@@ -107,7 +107,6 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 #### Local Server
 - Requires Python and the necessary dependencies installed locally
 - You must provide your own OpenAI API key via MCP environment variables
-- The VECTOR_STORE_ID should be configured in a .env file (optional)
 - See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for complete setup instructions
 - Allows for custom configurations and development
 
