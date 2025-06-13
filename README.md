@@ -20,7 +20,7 @@ There are two ways to use this MCP server:
 
 ### Option 1: Hosted Server (Recommended for most users)
 
-Connect to the hosted server on Heroku. You need to provide your OpenAI API key via MCP environment variables.
+Connect to the hosted server on Heroku. You'll provide your OpenAI API key when calling the tool.
 
 #### For Cline (VS Code Extension)
 
@@ -32,9 +32,6 @@ Add this configuration to your Cline MCP settings:
     "pyairbyte-mcp": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      },
       "description": "Hosted PyAirbyte MCP server for generating pipelines"
     }
   }
@@ -51,9 +48,6 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
     "pyairbyte-mcp": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      },
       "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
     }
   }
@@ -74,9 +68,6 @@ Add this configuration to your Cline MCP settings:
     "pyairbyte-mcp-local": {
       "command": "python",
       "args": ["/path/to/airbyte-mcp/main.py"],
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      },
       "description": "Local PyAirbyte MCP server"
     }
   }
@@ -93,9 +84,6 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
     "pyairbyte-mcp-local": {
       "command": "python",
       "args": ["/path/to/airbyte-mcp/main.py"],
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      },
       "description": "Local PyAirbyte MCP server"
     }
   }
@@ -107,7 +95,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 #### Hosted Server
 - The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
 - The `@modelcontextprotocol/server-fetch` package handles the HTTP-to-MCP protocol translation
-- You must provide your OpenAI API key via MCP environment variables
+- No MCP configuration needed - you provide your OpenAI API key when calling the tool
 
 #### Local Server
 - Requires Python and the necessary dependencies installed locally
@@ -119,7 +107,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 
 The server uses environment variables from two sources:
 
-#### MCP Configuration (Required for both remote and local servers)
+#### MCP Configuration (Required for local servers only)
 - **OPENAI_API_KEY**: OpenAI API key for accessing GPT models and file search functionality
 
 #### .env File (Optional)
@@ -128,7 +116,7 @@ The server uses environment variables from two sources:
 
 ### Security Note
 
-Both hosted and local servers now require you to provide your own OpenAI API key via MCP environment variables. This ensures better security and cost control. For local deployments, additional optional settings can be configured in a .env file.
+The hosted server requires you to provide your OpenAI API key when calling the tool, while local servers can use MCP environment variables. This ensures better security and cost control.
 
 ---
 

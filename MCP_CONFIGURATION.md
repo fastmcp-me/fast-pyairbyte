@@ -10,7 +10,7 @@ The MCP configuration file is typically located at:
 
 ## Configuration Format
 
-Both remote/hosted and local servers now use the same configuration approach - you must provide your OpenAI API key via MCP environment variables.
+The configuration approach differs between remote/hosted and local servers:
 
 ### For Remote/Hosted Server:
 ```json
@@ -18,14 +18,12 @@ Both remote/hosted and local servers now use the same configuration approach - y
   "mcpServers": {
     "pyairbyte-mcp": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      }
+      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"]
     }
   }
 }
 ```
+*Note: No environment variables needed in MCP configuration. You provide your OpenAI API key when calling the tool.*
 
 ### For Local Server:
 ```json
@@ -44,12 +42,17 @@ Both remote/hosted and local servers now use the same configuration approach - y
 
 ## Environment Variables
 
-### MCP Configuration (Required for both remote and local)
+### MCP Configuration (Required for local servers only)
 - `OPENAI_API_KEY`: Your OpenAI API key for accessing GPT models and file search functionality
 
 ### .env File (Optional, local server only)
 - `VECTOR_STORE_ID`: OpenAI Vector Store ID for file search capabilities (if you have uploaded PyAirbyte documentation)
 - `PORT`: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
+
+### Remote/Hosted Server Usage
+- No MCP environment variables required
+- Provide your OpenAI API key when calling the `generate_pyairbyte_pipeline` tool
+- Example: `generate_pyairbyte_pipeline(source_name="source-postgres", destination_name="destination-snowflake", openai_api_key="sk-proj-your-key-here")`
 
 ## Getting Your OpenAI API Key
 

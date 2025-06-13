@@ -463,6 +463,7 @@ This guide helps you run the generated PyAirbyte script to move data from `{sour
 async def generate_pyairbyte_pipeline(
     source_name: str,
     destination_name: str,
+    openai_api_key: str,
     ctx: Context # MCP Context object
     ) -> Dict[str, str]:
     """
@@ -471,20 +472,23 @@ async def generate_pyairbyte_pipeline(
     Args:
         source_name: The official Airbyte source connector name (e.g., 'source-postgres', 'source-github').
         destination_name: The official Airbyte destination connector name (e.g., 'destination-postgres', 'destination-snowflake') OR 'dataframe' to output to Pandas DataFrames.
+        openai_api_key: Your OpenAI API key for generating enhanced pipeline code and instructions.
         ctx: The MCP Context object (automatically provided).
     """
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
     ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
 
-    # Get OpenAI API key from environment variables (set via MCP configuration)
-    openai_api_key = os.environ.get("OPENAI_API_KEY")
+    # For local servers, try environment variable first, then use provided parameter
     if not openai_api_key:
-        error_msg = "OPENAI_API_KEY environment variable not set. Please configure it in your MCP settings."
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+    
+    if not openai_api_key:
+        error_msg = "OpenAI API key not provided. Please provide it as a parameter when calling the tool."
         logging.error(error_msg)
         ctx.error(error_msg)
         return {"error": error_msg}
 
-    # Create OpenAI client with API key from environment
+    # Create OpenAI client with API key
     openai_client = create_openai_client(openai_api_key)
     if not openai_client:
         error_msg = "Failed to initialize OpenAI client with provided API key. Please check your API key."
