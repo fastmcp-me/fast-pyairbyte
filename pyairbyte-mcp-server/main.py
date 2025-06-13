@@ -14,13 +14,16 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Get port from environment variable (Heroku sets this)
+port = int(os.environ.get("PORT", 8000))
+
 # --- Initialize MCP Server ---
 mcp = FastMCP(
     "pyairbyte-mcp-server",
     description="Generates PyAirbyte pipelines with instructions using context from documentation.",
     # Add dependencies required by *this server script*
-    dependencies=["openai", "python-dotenv"]
-    # Dependencies for the *generated* script (like 'airbyte') are handled in user instructions.
+    dependencies=["openai", "python-dotenv"],
+    port=port  # Use the port from environment variable
 )
 
 # --- OpenAI Client ---
