@@ -1,5 +1,0 @@
-fastmcp
-openai
-python-dotenv
-airbyte
-pandas 
