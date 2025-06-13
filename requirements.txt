@@ -1,5 +1,6 @@
-fastapi>=0.95.0,<0.96.0
-uvicorn>=0.21.0,<0.22.0
-python-dotenv>=0.21.0,<0.22.0
-openai>=1.0.0,<2.0.0
-mcp-server>=0.1.4,<0.2.0 
+fastapi==0.104.1
+uvicorn==0.24.0
+python-dotenv==1.0.0
+pydantic==2.4.2
+httpx==0.25.1
+python-multipart==0.0.6 
