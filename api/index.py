@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import Optional, List, Dict, Any
-from mcp.server.fastmcp import FastMCP, Context
+from mcp_core.server.fastmcp import FastMCP, Context
 from openai import OpenAI, BadRequestError
 from dotenv import load_dotenv
 import sys

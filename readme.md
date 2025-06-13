@@ -297,5 +297,100 @@ The MCP server will automatically validate connector names against the registry 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
-This project is not officially supported. It is intended for experimenting only. 
+This project is not officially supported. It is intended for experimenting only.
+
+# PostgreSQL to Snowflake Pipeline
+
+This script creates a data pipeline using PyAirbyte to transfer data from PostgreSQL to Snowflake.
+
+## Prerequisites
+
+1. Python 3.7 or higher
+2. pip (Python package installer)
+
+## Installation
+
+1. Create a virtual environment (recommended):
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+```
+
+2. Install the required packages:
+```bash
+pip install airbyte python-dotenv
+```
+
+## Configuration
+
+1. Create a `.env` file in the same directory as the script with the following variables:
+
+```env
+# PostgreSQL Source Configuration
+POSTGRES_HOST=your_postgres_host
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=your_database_name
+POSTGRES_USERNAME=your_username
+POSTGRES_PASSWORD=your_password
+POSTGRES_SSL=false
+
+# Snowflake Destination Configuration
+SNOWFLAKE_HOST=your_account.snowflakecomputing.com
+SNOWFLAKE_ROLE=your_role
+SNOWFLAKE_WAREHOUSE=your_warehouse
+SNOWFLAKE_DATABASE=your_database
+SNOWFLAKE_SCHEMA=your_schema
+SNOWFLAKE_USERNAME=your_username
+SNOWFLAKE_PASSWORD=your_password
+```
+
+Replace the placeholder values with your actual PostgreSQL and Snowflake credentials.
+
+## Usage
+
+1. Make sure your virtual environment is activated
+2. Run the script:
+```bash
+python3 postgres_to_snowflake.py
+```
+
+The script will:
+1. Connect to your PostgreSQL database
+2. Verify the connection
+3. Select all available streams (tables)
+4. Connect to Snowflake
+5. Transfer the data from PostgreSQL to Snowflake
+
+## Error Handling
+
+The script includes comprehensive error handling and logging. If any step fails:
+- The error will be logged with details
+- The script will exit with a non-zero status code
+- Check the logs for specific error messages
+
+## Customization
+
+You can modify the script to:
+- Select specific streams instead of all streams
+- Add data transformation logic
+- Configure additional connection parameters
+- Change logging behavior
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. Connection errors:
+   - Verify your credentials in the `.env` file
+   - Check network connectivity
+   - Ensure the database servers are running
+
+2. Permission errors:
+   - Verify user permissions in both PostgreSQL and Snowflake
+   - Check if the user has access to the specified databases and schemas
+
+3. Package installation errors:
+   - Make sure you're using the correct Python version
+   - Try upgrading pip: `pip install --upgrade pip`
+   - Install packages one by one to identify problematic dependencies
 
