@@ -43,18 +43,27 @@ def initialize_openai_client(api_key: str):
     try:
         openai_client = OpenAI(api_key=api_key)
         logging.info("OpenAI client initialized successfully")
+        return True
     except Exception as e:
         logging.error(f"Failed to initialize OpenAI client: {e}")
         openai_client = None
+        return False
 
-# Try to initialize from environment variables as fallback (for backward compatibility)
-try:
-    env_api_key = os.environ.get("OPENAI_API_KEY")
-    if env_api_key:
-        initialize_openai_client(env_api_key)
-        logging.info("Initialized OpenAI client from environment variables")
-except Exception as e:
-    logging.warning(f"Could not initialize from environment variables: {e}")
+# --- MCP Configuration Handler ---
+# FastMCP doesn't have a configure decorator, so we initialize from environment variables
+# The OpenAI API key should be provided via environment variables in the MCP configuration
+# The VECTOR_STORE_ID should be provided via .env file
+
+# Try to initialize OpenAI client from environment variables (set via MCP configuration)
+env_api_key = os.environ.get("OPENAI_API_KEY")
+if env_api_key:
+    success = initialize_openai_client(env_api_key)
+    if success:
+        logging.info("Initialized OpenAI client from MCP configuration environment variables")
+    else:
+        logging.error("Failed to initialize OpenAI client from MCP configuration environment variables")
+else:
+    logging.warning("OPENAI_API_KEY environment variable not set in MCP configuration. OpenAI functionality will be unavailable.")
 
 # --- Helper Functions ---
 

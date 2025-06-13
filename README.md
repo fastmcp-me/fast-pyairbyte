@@ -16,9 +16,13 @@ The MCP server is deployed and accessible at:
 
 ## MCP Client Configuration
 
-Below are example configuration files for connecting to this MCP server from different clients.
+There are two ways to use this MCP server:
 
-### For Cline (VS Code Extension)
+### Option 1: Hosted Server (Recommended for most users)
+
+Connect to the hosted server on Heroku - no local setup required.
+
+#### For Cline (VS Code Extension)
 
 Add this configuration to your Cline MCP settings:
 
@@ -34,7 +38,7 @@ Add this configuration to your Cline MCP settings:
 }
 ```
 
-### For Cursor
+#### For Cursor
 
 Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 
@@ -50,22 +54,77 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 }
 ```
 
+### Option 2: Local Server (For development or custom configurations)
+
+Run the server locally with your own OpenAI API key. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
+
+#### For Cline (VS Code Extension)
+
+Add this configuration to your Cline MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp-local": {
+      "command": "python",
+      "args": ["/path/to/airbyte-mcp/main.py"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      },
+      "description": "Local PyAirbyte MCP server"
+    }
+  }
+}
+```
+
+#### For Cursor
+
+Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp-local": {
+      "command": "python",
+      "args": ["/path/to/airbyte-mcp/main.py"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      },
+      "description": "Local PyAirbyte MCP server"
+    }
+  }
+}
+```
+
 ### Configuration Notes
 
+#### Hosted Server
 - The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
 - The `@modelcontextprotocol/server-fetch` package handles the HTTP-to-MCP protocol translation
 - No additional configuration parameters are needed as the server uses environment variables
+- The OpenAI API key is securely configured as an environment variable on the server
+
+#### Local Server
+- Requires Python and the necessary dependencies installed locally
+- You must provide your own OpenAI API key via MCP environment variables
+- The VECTOR_STORE_ID should be configured in a .env file (optional)
+- See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for complete setup instructions
+- Allows for custom configurations and development
 
 ### Server Environment Variables
 
-The server has the following environment variables configured on Heroku:
+The server uses environment variables from two sources:
 
-- **OPENAI_API_KEY**: OpenAI API key for generating enhanced pipeline code and instructions
+#### MCP Configuration (Required for local server)
+- **OPENAI_API_KEY**: OpenAI API key for accessing GPT models and file search functionality
+
+#### .env File (Optional)
 - **VECTOR_STORE_ID**: OpenAI Vector Store ID for enhanced file search capabilities
+- **PORT**: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
 
 ### Security Note
 
-The OpenAI API key is securely configured as an environment variable on the server, so no sensitive information needs to be included in your client configuration.
+When using the hosted server, the OpenAI API key is securely configured as an environment variable on the server, so no sensitive information needs to be included in your client configuration. For local deployments, only the OpenAI API key needs to be passed via MCP configuration, while other optional settings can be configured in a .env file.
 
 ---
 
@@ -106,6 +165,18 @@ Generates a complete PyAirbyte pipeline with setup instructions.
 - Setup and installation instructions
 - Environment variable templates
 - Best practices and usage guidelines
+
+---
+
+## Local Development
+
+For local development and testing:
+
+1. Clone this repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Set up your environment variables (see [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md))
+4. Run the server: `python main.py`
+5. Configure your MCP client to connect to the local server
 
 ---
 
