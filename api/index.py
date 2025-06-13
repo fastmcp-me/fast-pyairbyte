@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from typing import Optional, List, Dict, Any
-from mcp_core.server.fastmcp import FastMCP, Context
+from fastapi import FastAPI
 from openai import OpenAI, BadRequestError
 from dotenv import load_dotenv
 import sys
@@ -17,11 +17,10 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize MCP Server
-mcp = FastMCP(
-    "pyairbyte-mcp-server",
-    description="Generates PyAirbyte pipelines with instructions using context from documentation.",
-    dependencies=["openai", "python-dotenv"]
+# Initialize FastAPI app
+app = FastAPI(
+    title="PyAirbyte MCP Server",
+    description="Generates PyAirbyte pipelines with instructions using context from documentation."
 )
 
 # Initialize OpenAI client
@@ -42,15 +41,12 @@ from tools.pyairbyte_mcp_server import (
     generate_instructions
 )
 
-# Import the MCP server from the tools directory
-from tools.pyairbyte_mcp_server import mcp
+@app.get("/")
+async def root():
+    return {"message": "PyAirbyte MCP Server is running"}
 
-@mcp.tool()
-async def generate_pyairbyte_pipeline(
-    source_name: str,
-    destination_name: str,
-    ctx: Context
-) -> Dict[str, str]:
+@app.post("/generate-pipeline")
+async def generate_pipeline(source_name: str, destination_name: str):
     """Generate a PyAirbyte pipeline from source to destination."""
     try:
         # Get config keys for source and destination
@@ -83,11 +79,4 @@ async def generate_pyairbyte_pipeline(
         
     except Exception as e:
         logging.error(f"Error generating pipeline: {e}")
-        raise
-
-# Export the MCP app for Vercel
-app = mcp.app
-
-@app.get("/")
-async def root():
-    return {"message": "PyAirbyte MCP Server is running"} 
+        raise 
