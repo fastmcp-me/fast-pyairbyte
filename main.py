@@ -476,16 +476,41 @@ async def generate_pyairbyte_pipeline(
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
     ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
 
-    # Get OpenAI API key from environment variables
+    # Get OpenAI API key from multiple sources
+    openai_api_key = None
+    
+    # 1. Try to get from environment variables (works for local and some remote setups)
     openai_api_key = os.environ.get("OPENAI_API_KEY")
+    if openai_api_key:
+        logging.info("OpenAI API key found in environment variables")
+    
+    # 2. Try to get from context metadata (for HTTP-based MCP connections)
+    if not openai_api_key and hasattr(ctx, 'meta') and ctx.meta:
+        logging.info(f"Checking context meta for API key: {list(ctx.meta.keys()) if isinstance(ctx.meta, dict) else 'not a dict'}")
+        if isinstance(ctx.meta, dict) and 'env' in ctx.meta:
+            openai_api_key = ctx.meta['env'].get('OPENAI_API_KEY')
+            if openai_api_key:
+                logging.info("OpenAI API key found in context meta environment")
+    
+    # 3. Try to get from request headers (alternative approach)
+    if not openai_api_key:
+        try:
+            if hasattr(ctx, 'request') and ctx.request and hasattr(ctx.request, 'headers'):
+                headers = ctx.request.headers
+                openai_api_key = headers.get('x-openai-api-key') or headers.get('openai-api-key')
+                if openai_api_key:
+                    logging.info("OpenAI API key found in request headers")
+        except Exception as e:
+            logging.debug(f"Could not check request headers: {e}")
     
     if not openai_api_key:
-        error_msg = "OPENAI_API_KEY environment variable not set. Please configure it in your MCP settings."
+        error_msg = "OPENAI_API_KEY not found. Please configure it in your MCP settings environment variables."
         logging.error(error_msg)
+        logging.error(f"Available environment variables: {[k for k in os.environ.keys() if 'OPENAI' in k or 'API' in k]}")
+        if hasattr(ctx, 'meta'):
+            logging.error(f"Context meta: {ctx.meta}")
         ctx.error(error_msg)
         return {"error": error_msg}
-    
-    logging.info("OpenAI API key found in environment variables")
 
     # Create OpenAI client with API key
     openai_client = create_openai_client(openai_api_key)
