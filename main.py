@@ -481,9 +481,10 @@ async def generate_pyairbyte_pipeline(
     
     # 1. Try to get from request headers (for remote servers with header configuration)
     try:
-        # Access the FastAPI request object through the context
+        # Check if we can access headers through different methods
         if hasattr(ctx, 'request') and ctx.request:
             headers = ctx.request.headers
+            logging.info(f"Available headers: {dict(headers)}")
             # Try common header names for API keys
             openai_api_key = (
                 headers.get("x-openai-api-key") or 
@@ -492,8 +493,22 @@ async def generate_pyairbyte_pipeline(
             )
             if openai_api_key:
                 logging.info("OpenAI API key found in request headers")
+        elif hasattr(ctx, 'meta') and ctx.meta:
+            # Try accessing through meta if available
+            logging.info(f"Context meta: {ctx.meta}")
+            if 'headers' in ctx.meta:
+                headers = ctx.meta['headers']
+                openai_api_key = (
+                    headers.get("x-openai-api-key") or 
+                    headers.get("openai-api-key") or
+                    headers.get("authorization", "").replace("Bearer ", "") if headers.get("authorization", "").startswith("Bearer ") else None
+                )
+                if openai_api_key:
+                    logging.info("OpenAI API key found in context meta headers")
+        else:
+            logging.info(f"Context attributes: {dir(ctx)}")
     except Exception as e:
-        logging.debug(f"Could not access request headers: {e}")
+        logging.error(f"Could not access request headers: {e}")
     
     # 2. Fallback to environment variable (for local servers)
     if not openai_api_key:
