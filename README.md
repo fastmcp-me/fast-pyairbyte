@@ -31,10 +31,9 @@ Add this configuration to your Cline MCP settings:
   "mcpServers": {
     "pyairbyte-mcp": {
       "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
-      },      "description": "Hosted PyAirbyte MCP server for generating pipelines"
+      }
     }
   }
 }
@@ -49,10 +48,83 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
   "mcpServers": {
     "pyairbyte-mcp": {
       "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
-      },      "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
+      }
+    }
+  }
+}
+```
+
+### Option 2: Local Server (For development or custom configurations)
+
+Run the server locally with your own OpenAI API key. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
+
+#### For Cline (VS Code Extension)
+
+Add this configuration to your Cline MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp-local": {
+      "command": "python",
+      "args": ["/path/to/airbyte-mcp/main.py"],
+      "description": "Hosted PyAirbyte MCP server for generating pipelines"
+    }
+  }
+}
+```
+
+#### For Cursor
+
+Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp": {
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      }
+    }
+  }
+}
+```
+
+#### For Cursor
+
+Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp": {
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### Option 2: Local Server (For development or custom configurations)
+
+Run the server locally with your own OpenAI API key. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
+
+#### For Cline (VS Code Extension)
+
+Add this configuration to your Cline MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp-local": {
+      "command": "python",
+      "args": ["/path/to/airbyte-mcp/main.py"],
+      "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
     }
   }
 }
