@@ -578,10 +578,14 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-app = mcp.streamable_http_app()
+# Try using the stdio app and manually creating HTTP endpoints
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+import json
+
+app = FastAPI(title="PyAirbyte MCP Server")
 
 # Add CORS middleware
-from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -605,6 +609,129 @@ async def debug_requests(request, call_next):
     response = await call_next(request)
     logging.info(f"Response status: {response.status_code}")
     return response
+
+# Create a manual MCP endpoint that handles the JSON-RPC calls
+@app.post("/mcp/")
+@app.post("/mcp")
+async def handle_mcp_request(request: Request):
+    """Handle MCP JSON-RPC requests manually"""
+    try:
+        body = await request.body()
+        data = json.loads(body)
+        logging.info(f"Parsed MCP request: {data}")
+        
+        # Handle different MCP methods
+        method = data.get("method")
+        params = data.get("params", {})
+        request_id = data.get("id")
+        
+        if method == "tools/call":
+            tool_name = params.get("name")
+            arguments = params.get("arguments", {})
+            
+            if tool_name == "generate_pyairbyte_pipeline":
+                # Create a mock context object
+                class MockContext:
+                    def __init__(self, request_headers):
+                        # Try to get API key from various sources
+                        api_key = None
+                        
+                        # Check environment variables first
+                        api_key = os.environ.get("OPENAI_API_KEY")
+                        
+                        # Check request headers as fallback
+                        if not api_key:
+                            api_key = request_headers.get("x-openai-api-key") or request_headers.get("openai-api-key")
+                        
+                        self.meta = {"env": {"OPENAI_API_KEY": api_key}} if api_key else {}
+                        logging.info(f"MockContext created with API key: {'found' if api_key else 'not found'}")
+                    
+                    def info(self, msg):
+                        logging.info(f"Context info: {msg}")
+                    
+                    def error(self, msg):
+                        logging.error(f"Context error: {msg}")
+                
+                # Call our tool function directly
+                result = await generate_pyairbyte_pipeline(
+                    source_name=arguments.get("source_name"),
+                    destination_name=arguments.get("destination_name"),
+                    ctx=MockContext(request.headers)
+                )
+                
+                # Return JSON-RPC response
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": result
+                }
+        
+        # Handle tools/list method
+        elif method == "tools/list":
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "tools": [
+                        {
+                            "name": "generate_pyairbyte_pipeline",
+                            "description": "Generates a PyAirbyte Python script and setup instructions for a given source and destination.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "source_name": {
+                                        "type": "string",
+                                        "description": "The official Airbyte source connector name (e.g., 'source-postgres', 'source-github')."
+                                    },
+                                    "destination_name": {
+                                        "type": "string", 
+                                        "description": "The official Airbyte destination connector name (e.g., 'destination-postgres', 'destination-snowflake') OR 'dataframe' to output to Pandas DataFrames."
+                                    }
+                                },
+                                "required": ["source_name", "destination_name"]
+                            }
+                        }
+                    ]
+                }
+            }
+        
+        # Handle initialize method
+        elif method == "initialize":
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "serverInfo": {
+                        "name": "pyairbyte-mcp-server",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+        
+        else:
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not found: {method}"
+                }
+            }
+            
+    except Exception as e:
+        logging.error(f"Error handling MCP request: {e}")
+        return {
+            "jsonrpc": "2.0",
+            "id": data.get("id") if 'data' in locals() else None,
+            "error": {
+                "code": -32603,
+                "message": f"Internal error: {str(e)}"
+            }
+        }
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
