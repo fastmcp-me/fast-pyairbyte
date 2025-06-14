@@ -463,7 +463,7 @@ async def generate_pyairbyte_pipeline(
     source_name: str,
     destination_name: str,
     ctx: Context # MCP Context object
-    ) -> Dict[str, str]:
+    ) -> str:
     """
     Generates a PyAirbyte Python script and setup instructions for a given source and destination.
 
@@ -509,7 +509,7 @@ async def generate_pyairbyte_pipeline(
         if hasattr(ctx, 'meta'):
             logging.error(f"Context meta: {ctx.meta}")
         ctx.error(error_msg)
-        return {"error": error_msg}
+        return f"Error: {error_msg}"
 
     # Create OpenAI client with API key
     openai_client = create_openai_client(openai_api_key)
@@ -517,7 +517,7 @@ async def generate_pyairbyte_pipeline(
         error_msg = "Failed to initialize OpenAI client with provided API key. Please check your API key."
         logging.error(error_msg)
         ctx.error(error_msg)
-        return {"error": error_msg}
+        return f"Error: {error_msg}"
 
     output_to_dataframe = destination_name.lower() == "dataframe"
 
@@ -553,7 +553,7 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         logging.error(f"Error during code generation: {e}")
         ctx.error(f"Failed to generate Python code: {e}")
-        return {"error": f"An internal error occurred during code generation: {e}"}
+        return f"Error: An internal error occurred during code generation: {e}"
 
 
     # --- Generate Instructions ---
