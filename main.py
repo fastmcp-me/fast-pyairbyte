@@ -578,14 +578,10 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-# Try using the regular FastAPI app instead of streamable_http_app
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-# Create a regular FastAPI app and mount the MCP server
-app = FastAPI(title="PyAirbyte MCP Server")
+app = mcp.streamable_http_app()
 
 # Add CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -609,10 +605,6 @@ async def debug_requests(request, call_next):
     response = await call_next(request)
     logging.info(f"Response status: {response.status_code}")
     return response
-
-# Mount the MCP server at /mcp
-mcp_app = mcp.streamable_http_app()
-app.mount("/mcp", mcp_app)
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
