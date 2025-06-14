@@ -660,11 +660,21 @@ async def handle_mcp_request(request: Request):
                 )
                 
                 # Return JSON-RPC response
-                return {
+                response_data = {
                     "jsonrpc": "2.0",
                     "id": request_id,
                     "result": result
                 }
+                
+                # Create response with proper headers
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    content=response_data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Cache-Control": "no-cache"
+                    }
+                )
         
         # Handle tools/list method
         elif method == "tools/list":
