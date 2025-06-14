@@ -476,51 +476,16 @@ async def generate_pyairbyte_pipeline(
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
     ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
 
-    # Try to get OpenAI API key from multiple sources
-    openai_api_key = None
-    
-    # 1. Try to get from request headers (for remote servers with header configuration)
-    try:
-        # Check if we can access headers through different methods
-        if hasattr(ctx, 'request') and ctx.request:
-            headers = ctx.request.headers
-            logging.info(f"Available headers: {dict(headers)}")
-            # Try common header names for API keys
-            openai_api_key = (
-                headers.get("x-openai-api-key") or 
-                headers.get("openai-api-key") or
-                headers.get("authorization", "").replace("Bearer ", "") if headers.get("authorization", "").startswith("Bearer ") else None
-            )
-            if openai_api_key:
-                logging.info("OpenAI API key found in request headers")
-        elif hasattr(ctx, 'meta') and ctx.meta:
-            # Try accessing through meta if available
-            logging.info(f"Context meta: {ctx.meta}")
-            if 'headers' in ctx.meta:
-                headers = ctx.meta['headers']
-                openai_api_key = (
-                    headers.get("x-openai-api-key") or 
-                    headers.get("openai-api-key") or
-                    headers.get("authorization", "").replace("Bearer ", "") if headers.get("authorization", "").startswith("Bearer ") else None
-                )
-                if openai_api_key:
-                    logging.info("OpenAI API key found in context meta headers")
-        else:
-            logging.info(f"Context attributes: {dir(ctx)}")
-    except Exception as e:
-        logging.error(f"Could not access request headers: {e}")
-    
-    # 2. Fallback to environment variable (for local servers)
-    if not openai_api_key:
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
-        if openai_api_key:
-            logging.info("OpenAI API key found in environment variables")
+    # Get OpenAI API key from environment variables
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
     
     if not openai_api_key:
-        error_msg = "OpenAI API key not found. Please provide it via headers (X-OpenAI-API-Key or Authorization: Bearer) or environment variables."
+        error_msg = "OPENAI_API_KEY environment variable not set. Please configure it in your MCP settings."
         logging.error(error_msg)
         ctx.error(error_msg)
         return {"error": error_msg}
+    
+    logging.info("OpenAI API key found in environment variables")
 
     # Create OpenAI client with API key
     openai_client = create_openai_client(openai_api_key)
