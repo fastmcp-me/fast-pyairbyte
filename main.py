@@ -562,7 +562,7 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         logging.error(f"Error during instruction generation: {e}")
         ctx.error(f"Failed to generate instructions: {e}")
-        return {"error": f"An internal error occurred during instruction generation: {e}"}
+        return f"Error: An internal error occurred during instruction generation: {e}"
 
 
     logging.info("Successfully generated pipeline code and instructions.")
@@ -698,7 +698,8 @@ async def handle_mcp_request(request: Request):
                                         "description": "The official Airbyte destination connector name (e.g., 'destination-postgres', 'destination-snowflake') OR 'dataframe' to output to Pandas DataFrames."
                                     }
                                 },
-                                "required": ["source_name", "destination_name"]
+                                "required": ["source_name", "destination_name"],
+                                "additionalProperties": false
                             }
                         }
                     ]
