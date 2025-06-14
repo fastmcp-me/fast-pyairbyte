@@ -463,7 +463,7 @@ async def generate_pyairbyte_pipeline(
     source_name: str,
     destination_name: str,
     ctx: Context # MCP Context object
-    ) -> str:
+    ) -> Dict[str, Any]:
     """
     Generates a PyAirbyte Python script and setup instructions for a given source and destination.
 
@@ -509,7 +509,14 @@ async def generate_pyairbyte_pipeline(
         if hasattr(ctx, 'meta'):
             logging.error(f"Context meta: {ctx.meta}")
         ctx.error(error_msg)
-        return f"Error: {error_msg}"
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: {error_msg}"
+                }
+            ]
+        }
 
     # Create OpenAI client with API key
     openai_client = create_openai_client(openai_api_key)
@@ -517,7 +524,14 @@ async def generate_pyairbyte_pipeline(
         error_msg = "Failed to initialize OpenAI client with provided API key. Please check your API key."
         logging.error(error_msg)
         ctx.error(error_msg)
-        return f"Error: {error_msg}"
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: {error_msg}"
+                }
+            ]
+        }
 
     output_to_dataframe = destination_name.lower() == "dataframe"
 
@@ -553,7 +567,14 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         logging.error(f"Error during code generation: {e}")
         ctx.error(f"Failed to generate Python code: {e}")
-        return f"Error: An internal error occurred during code generation: {e}"
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: An internal error occurred during code generation: {e}"
+                }
+            ]
+        }
 
 
     # --- Generate Instructions ---
@@ -562,19 +583,29 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         logging.error(f"Error during instruction generation: {e}")
         ctx.error(f"Failed to generate instructions: {e}")
-        return f"Error: An internal error occurred during instruction generation: {e}"
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Error: An internal error occurred during instruction generation: {e}"
+                }
+            ]
+        }
 
 
     logging.info("Successfully generated pipeline code and instructions.")
     ctx.info("Pipeline generation complete.")
 
     # --- Return Result ---
-    # Return as a simple string that Cline can display properly
-    result_text = f"""Successfully generated PyAirbyte pipeline for {source_name} -> {destination_name}.
-
-{instructions}"""
-    
-    return result_text
+    # Return as a structured object that MCP expects
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": f"Successfully generated PyAirbyte pipeline for {source_name} -> {destination_name}.\n\n{instructions}"
+            }
+        ]
+    }
 
 
 # --- Expose the FastAPI app for deployment ---
