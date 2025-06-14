@@ -1,4 +1,5 @@
 fastmcp
+fastapi
 openai
 python-dotenv
 airbyte
