@@ -17,8 +17,7 @@ The configuration approach differs between remote/hosted and local servers:
 {
   "mcpServers": {
     "pyairbyte-mcp": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"]
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"
     }
   }
 }

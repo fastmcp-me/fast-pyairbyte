@@ -30,8 +30,7 @@ Add this configuration to your Cline MCP settings:
 {
   "mcpServers": {
     "pyairbyte-mcp": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
       "description": "Hosted PyAirbyte MCP server for generating pipelines"
     }
   }
@@ -46,8 +45,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 {
   "mcpServers": {
     "pyairbyte-mcp": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"],
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
       "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
     }
   }
@@ -94,7 +92,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 
 #### Hosted Server
 - The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
-- The `@modelcontextprotocol/server-fetch` package handles the HTTP-to-MCP protocol translation
+- Direct URL connection to the MCP server
 - No MCP configuration needed - you provide your OpenAI API key when calling the tool
 
 #### Local Server
