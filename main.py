@@ -578,27 +578,14 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-app = mcp.streamable_http_app()
-
-# Add some debugging middleware to see what requests we're getting
-@app.middleware("http")
-async def debug_requests(request, call_next):
-    logging.info(f"Received {request.method} request to {request.url.path}")
-    logging.info(f"Headers: {dict(request.headers)}")
-    if request.method == "POST":
-        # Try to read the body for debugging
-        try:
-            body = await request.body()
-            logging.info(f"Request body: {body[:500]}...")  # First 500 chars
-        except Exception as e:
-            logging.info(f"Could not read request body: {e}")
-    
-    response = await call_next(request)
-    logging.info(f"Response status: {response.status_code}")
-    return response
-
-# Add CORS middleware to handle cross-origin requests
+# Try using the regular FastAPI app instead of streamable_http_app
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Create a regular FastAPI app and mount the MCP server
+app = FastAPI(title="PyAirbyte MCP Server")
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -606,6 +593,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add debugging middleware
+@app.middleware("http")
+async def debug_requests(request, call_next):
+    logging.info(f"Received {request.method} request to {request.url.path}")
+    logging.info(f"Headers: {dict(request.headers)}")
+    if request.method == "POST":
+        try:
+            body = await request.body()
+            logging.info(f"Request body: {body[:500]}...")
+        except Exception as e:
+            logging.info(f"Could not read request body: {e}")
+    
+    response = await call_next(request)
+    logging.info(f"Response status: {response.status_code}")
+    return response
+
+# Mount the MCP server at /mcp
+mcp_app = mcp.streamable_http_app()
+app.mount("/mcp", mcp_app)
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
