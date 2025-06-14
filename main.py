@@ -581,6 +581,23 @@ async def generate_pyairbyte_pipeline(
 # --- Expose the FastAPI app for deployment ---
 app = mcp.streamable_http_app()
 
+# Add some debugging middleware to see what requests we're getting
+@app.middleware("http")
+async def debug_requests(request, call_next):
+    logging.info(f"Received {request.method} request to {request.url.path}")
+    logging.info(f"Headers: {dict(request.headers)}")
+    if request.method == "POST":
+        # Try to read the body for debugging
+        try:
+            body = await request.body()
+            logging.info(f"Request body: {body[:500]}...")  # First 500 chars
+        except Exception as e:
+            logging.info(f"Could not read request body: {e}")
+    
+    response = await call_next(request)
+    logging.info(f"Response status: {response.status_code}")
+    return response
+
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
