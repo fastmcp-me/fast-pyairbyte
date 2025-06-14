@@ -31,7 +31,9 @@ Add this configuration to your Cline MCP settings:
   "mcpServers": {
     "pyairbyte-mcp": {
       "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "description": "Hosted PyAirbyte MCP server for generating pipelines"
+      "headers": {
+        "X-OpenAI-API-Key": "your-openai-api-key-here"
+      },      "description": "Hosted PyAirbyte MCP server for generating pipelines"
     }
   }
 }
@@ -46,7 +48,9 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
   "mcpServers": {
     "pyairbyte-mcp": {
       "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
+      "headers": {
+        "X-OpenAI-API-Key": "your-openai-api-key-here"
+      },      "description": "Hosted PyAirbyte MCP server for generating PyAirbyte pipelines"
     }
   }
 }
@@ -93,7 +97,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 #### Hosted Server
 - The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
 - Direct URL connection to the MCP server
-- No MCP configuration needed - you provide your OpenAI API key when calling the tool
+- Provide your OpenAI API key via headers in the MCP configuration
 
 #### Local Server
 - Requires Python and the necessary dependencies installed locally

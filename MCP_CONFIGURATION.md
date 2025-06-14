@@ -17,12 +17,15 @@ The configuration approach differs between remote/hosted and local servers:
 {
   "mcpServers": {
     "pyairbyte-mcp": {
-      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp"
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
+      "headers": {
+        "X-OpenAI-API-Key": "your-openai-api-key-here"
+      }
     }
   }
 }
 ```
-*Note: No environment variables needed in MCP configuration. You provide your OpenAI API key when calling the tool.*
+*Note: OpenAI API key is provided via headers in the MCP configuration.*
 
 ### For Local Server:
 ```json
@@ -49,9 +52,9 @@ The configuration approach differs between remote/hosted and local servers:
 - `PORT`: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
 
 ### Remote/Hosted Server Usage
-- No MCP environment variables required
-- Provide your OpenAI API key when calling the `generate_pyairbyte_pipeline` tool
-- Example: `generate_pyairbyte_pipeline(source_name="source-postgres", destination_name="destination-snowflake", openai_api_key="sk-proj-your-key-here")`
+- OpenAI API key provided via headers in MCP configuration
+- No need to provide API key when calling tools - it's automatically included in requests
+- Clean tool calls: `generate_pyairbyte_pipeline(source_name="source-postgres", destination_name="destination-snowflake")`
 
 ## Getting Your OpenAI API Key
 

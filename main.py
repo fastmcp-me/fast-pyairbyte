@@ -463,7 +463,6 @@ This guide helps you run the generated PyAirbyte script to move data from `{sour
 async def generate_pyairbyte_pipeline(
     source_name: str,
     destination_name: str,
-    openai_api_key: str,
     ctx: Context # MCP Context object
     ) -> Dict[str, str]:
     """
@@ -472,18 +471,38 @@ async def generate_pyairbyte_pipeline(
     Args:
         source_name: The official Airbyte source connector name (e.g., 'source-postgres', 'source-github').
         destination_name: The official Airbyte destination connector name (e.g., 'destination-postgres', 'destination-snowflake') OR 'dataframe' to output to Pandas DataFrames.
-        openai_api_key: Your OpenAI API key for generating enhanced pipeline code and instructions.
         ctx: The MCP Context object (automatically provided).
     """
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
     ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
 
-    # For local servers, try environment variable first, then use provided parameter
+    # Try to get OpenAI API key from multiple sources
+    openai_api_key = None
+    
+    # 1. Try to get from request headers (for remote servers with header configuration)
+    try:
+        # Access the FastAPI request object through the context
+        if hasattr(ctx, 'request') and ctx.request:
+            headers = ctx.request.headers
+            # Try common header names for API keys
+            openai_api_key = (
+                headers.get("x-openai-api-key") or 
+                headers.get("openai-api-key") or
+                headers.get("authorization", "").replace("Bearer ", "") if headers.get("authorization", "").startswith("Bearer ") else None
+            )
+            if openai_api_key:
+                logging.info("OpenAI API key found in request headers")
+    except Exception as e:
+        logging.debug(f"Could not access request headers: {e}")
+    
+    # 2. Fallback to environment variable (for local servers)
     if not openai_api_key:
         openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if openai_api_key:
+            logging.info("OpenAI API key found in environment variables")
     
     if not openai_api_key:
-        error_msg = "OpenAI API key not provided. Please provide it as a parameter when calling the tool."
+        error_msg = "OpenAI API key not found. Please provide it via headers (X-OpenAI-API-Key or Authorization: Bearer) or environment variables."
         logging.error(error_msg)
         ctx.error(error_msg)
         return {"error": error_msg}
