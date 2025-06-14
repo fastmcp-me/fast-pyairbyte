@@ -180,3 +180,4 @@ This MCP server is deployed on Heroku and ready to use. The configuration separa
 - **Server Environment**: All sensitive configuration is set as environment variables on the server
 
 This approach ensures no sensitive information needs to be shared in client configurations, while the server handles all authentication and external service integration securely.
+# Force deployment Fri Jun 13 16:58:12 PDT 2025
