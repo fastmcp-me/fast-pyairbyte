@@ -569,12 +569,12 @@ async def generate_pyairbyte_pipeline(
     ctx.info("Pipeline generation complete.")
 
     # --- Return Result ---
-    # Return as a structured dictionary or a single markdown string
-    return {
-        "message": f"Successfully generated PyAirbyte pipeline instructions and code for {source_name} -> {destination_name}.",
-        "instructions": instructions,
-        # "code": generated_code # Code is already included within instructions markdown
-    }
+    # Return as a simple string that Cline can display properly
+    result_text = f"""Successfully generated PyAirbyte pipeline for {source_name} -> {destination_name}.
+
+{instructions}"""
+    
+    return result_text
 
 
 # --- Expose the FastAPI app for deployment ---
