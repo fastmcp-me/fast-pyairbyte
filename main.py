@@ -22,8 +22,7 @@ mcp = FastMCP(
     "pyairbyte-mcp-server",
     description="Generates PyAirbyte pipelines with instructions using context from documentation.",
     # Add dependencies required by *this server script*
-    dependencies=["openai", "python-dotenv"],
-    port=port  # Use the port from environment variable
+    dependencies=["openai", "python-dotenv"]
 )
 
 # --- OpenAI Client ---
@@ -597,6 +596,16 @@ async def debug_requests(request, call_next):
     response = await call_next(request)
     logging.info(f"Response status: {response.status_code}")
     return response
+
+# Add CORS middleware to handle cross-origin requests
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
