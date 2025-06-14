@@ -126,16 +126,73 @@ The hosted server requires you to provide your OpenAI API key when calling the t
 
 ## Usage
 
-Once configured, you can use the MCP server in your AI assistant by asking it to generate PyAirbyte pipelines. For example:
+Once configured, you can use the MCP server in your AI assistant by asking it to generate PyAirbyte pipelines.
 
-- "Generate a PyAirbyte pipeline from PostgreSQL to Snowflake"
-- "Create a pipeline that reads from GitHub and outputs to a DataFrame"
-- "Help me set up a data pipeline from Salesforce to BigQuery"
+### 🚀 How to Use in Cline
 
-The server will generate complete Python code with setup instructions, environment variable templates, and best practices for your specific source and destination combination.
+#### 1. Verify Connection
+- Look for the MCP server status in Cline's interface
+- You should see "pyairbyte-mcp" listed with 1 tool available
+- If it shows 0 tools or is red, restart Cline
+
+#### 2. Generate Pipelines with Natural Language
+Simply ask Cline to generate a PyAirbyte pipeline! Here are example prompts:
+
+**Basic Examples:**
+```
+Generate a PyAirbyte pipeline from source-postgres to destination-snowflake
+```
+
+```
+Create a pipeline to move data from source-github to dataframe
+```
+
+```
+Build a PyAirbyte script for source-stripe to destination-bigquery
+```
+
+**More Detailed Examples:**
+```
+I need to sync data from a PostgreSQL database to Snowflake. Can you generate the PyAirbyte code for me?
+```
+
+```
+Create a pipeline that reads from GitHub API and outputs to Pandas DataFrames for analysis
+```
+
+```
+Generate PyAirbyte code to move Stripe payment data to BigQuery with proper error handling
+```
+
+```
+Help me set up a data pipeline from Salesforce to a local PostgreSQL database
+```
+
+#### 3. What Cline Will Do
+When you ask for a pipeline, Cline will:
+1. **Automatically call the MCP tool** with your source and destination
+2. **Generate complete Python code** for your pipeline
+3. **Provide setup instructions** including:
+   - Virtual environment setup
+   - Dependency installation
+   - Configuration file creation
+   - Environment variable setup
+   - Step-by-step usage guide
+
+#### 4. Available Source/Destination Options
+- **Sources**: Any Airbyte source connector (e.g., `source-postgres`, `source-github`, `source-stripe`, `source-mysql`, `source-salesforce`)
+- **Destinations**: Any Airbyte destination connector (e.g., `destination-snowflake`, `destination-bigquery`, `destination-postgres`) OR `dataframe` for Pandas analysis
+
+#### 5. Pro Tips
+- **Use "dataframe"** as destination if you want to analyze data in Python/Pandas
+- **Be specific** about your source and destination names (use official Airbyte connector names)
+- **Ask follow-up questions** if you need help with specific configuration or setup
+
+The tool will automatically use your OpenAI API key (configured in the MCP settings) to generate enhanced, well-documented pipeline code with best practices and detailed setup instructions!
+
+Just start by asking Cline to generate a pipeline for your specific use case! 🎯
 
 ---
-
 ## Features
 
 - **Automated Code Generation**: Creates complete PyAirbyte pipeline scripts
