@@ -20,7 +20,8 @@ The configuration approach differs between remote/hosted and local servers:
       "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
-      }
+      },
+      "disabled": false
     }
   }
 }
@@ -36,7 +37,8 @@ The configuration approach differs between remote/hosted and local servers:
       "args": ["/Users/quintonwall/code/airbyte-mcp/main.py"],
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
-      }
+      },
+      "disabled": false
     }
   }
 }
@@ -76,11 +78,13 @@ Here's an example of a complete MCP settings file with the PyAirbyte server conf
       "args": ["/Users/quintonwall/code/airbyte-mcp/main.py"],
       "env": {
         "OPENAI_API_KEY": "sk-proj-abc123..."
-      }
+      },
+      "disabled": false
     },
     "other-server": {
       "command": "node",
-      "args": ["/path/to/other/server.js"]
+      "args": ["/path/to/other/server.js"],
+      "disabled": false
     }
   }
 }
