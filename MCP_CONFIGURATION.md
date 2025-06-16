@@ -12,7 +12,22 @@ The MCP configuration file is typically located at:
 
 The configuration approach differs between remote/hosted and local servers:
 
-### For Remote/Hosted Server:
+### For Remote/Hosted Server (Cline/Claude Dev Extension):
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp": {
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
+      "disabled": false,
+      "autoApprove": [],
+      "timeout": 30
+    }
+  }
+}
+```
+*Note: For Cline/Claude Dev Extension, the remote server will automatically use the OPENAI_API_KEY from your local .env file in the project directory. The `env` field is not supported in Cline's MCP settings schema for remote servers.*
+
+### For Remote/Hosted Server (Claude Desktop App):
 ```json
 {
   "mcpServers": {
@@ -26,7 +41,7 @@ The configuration approach differs between remote/hosted and local servers:
   }
 }
 ```
-*Note: OpenAI API key is provided via environment variables in the MCP configuration.*
+*Note: Claude Desktop App supports the `env` field for passing environment variables to remote servers.*
 
 ### For Local Server:
 ```json
