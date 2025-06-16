@@ -6,15 +6,48 @@ The PyAirbyte Managed Code Provider (MCP) service is an AI-powered backend that 
 
 - **Generates PyAirbyte pipeline code** based on user instructions and connector documentation.
 - **Uses OpenAI and file search** to provide context-aware code and instructions.
-- **Requires local MCP configuration** with your OpenAI API key.
+- **Available as both remote hosted service and local installation**
 
 ---
 
-## MCP Client Configuration
+## Quick Start - Remote Server (Recommended)
+
+### For Cursor
+
+The easiest way to get started is using our hosted MCP server. Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "pyairbyte-mcp": {
+      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**Requirements:**
+- Your own OpenAI API key
+- No local installation required
+- Works immediately after configuration
+
+**Configuration Steps:**
+1. Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/)
+2. Create or edit `.cursor/mcp.json` in your project directory (for project-specific) or `~/.cursor/mcp.json` (for global access)
+3. Add the configuration above with your actual OpenAI API key
+4. Restart Cursor
+5. Start generating PyAirbyte pipelines!
+
+---
+
+## Local Installation (Advanced)
 
 ### Local Server Configuration
 
-Run the server locally with your own OpenAI API key. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
+For advanced users who prefer to run the server locally with full control. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
 
 #### For Cline (VS Code Extension)
 
@@ -35,7 +68,7 @@ Add this configuration to your Cline MCP settings:
 }
 ```
 
-#### For Cursor
+#### For Cursor (Local)
 
 Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 
@@ -54,7 +87,7 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 }
 ```
 
-### Configuration Requirements
+### Local Configuration Requirements
 
 - Requires Python and the necessary dependencies installed locally
 - You must provide your own OpenAI API key via MCP environment variables
