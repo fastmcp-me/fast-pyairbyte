@@ -1,6 +1,6 @@
 # MCP Configuration Guide
 
-This guide explains how to configure the PyAirbyte MCP Server. Both local and remote servers now require you to provide your own OpenAI API key when using the tools.
+This guide explains how to configure the PyAirbyte MCP Server for local use only.
 
 ## Configuration File Location
 
@@ -9,39 +9,6 @@ The MCP configuration file is typically located at:
 - **Claude Desktop App**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ## Configuration Format
-
-The configuration approach differs between remote/hosted and local servers:
-
-### For Remote/Hosted Server (Cline/Claude Dev Extension):
-```json
-{
-  "mcpServers": {
-    "pyairbyte-mcp": {
-      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "disabled": false,
-      "autoApprove": [],
-      "timeout": 30
-    }
-  }
-}
-```
-*Note: For Cline/Claude Dev Extension, the remote server will automatically use the OPENAI_API_KEY from your local .env file in the project directory. The `env` field is not supported in Cline's MCP settings schema for remote servers.*
-
-### For Remote/Hosted Server (Claude Desktop App):
-```json
-{
-  "mcpServers": {
-    "pyairbyte-mcp": {
-      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      },
-      "disabled": false
-    }
-  }
-}
-```
-*Note: Claude Desktop App supports the `env` field for passing environment variables to remote servers.*
 
 ### For Local Server:
 ```json
@@ -61,17 +28,12 @@ The configuration approach differs between remote/hosted and local servers:
 
 ## Environment Variables
 
-### MCP Configuration (Required for local servers only)
+### MCP Configuration (Required)
 - `OPENAI_API_KEY`: Your OpenAI API key for accessing GPT models and file search functionality
 
-### .env File (Optional, local server only)
+### .env File (Optional)
 - `VECTOR_STORE_ID`: OpenAI Vector Store ID for file search capabilities (if you have uploaded PyAirbyte documentation)
-- `PORT`: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
-
-### Remote/Hosted Server Usage
-- OpenAI API key provided via environment variables in MCP configuration
-- No need to provide API key when calling tools - it's automatically included in requests
-- Clean tool calls: `generate_pyairbyte_pipeline(source_name="source-postgres", destination_name="destination-snowflake")`
+- `PORT`: Port number for the server (defaults to 8000)
 
 ## Getting Your OpenAI API Key
 

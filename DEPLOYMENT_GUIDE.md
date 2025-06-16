@@ -1,86 +1,45 @@
-# PyAirbyte MCP Server - Heroku Deployment Guide
+# PyAirbyte MCP Server - Local Development Guide
 
-## Issues Fixed
+## Overview
 
-This document outlines the issues that were identified and fixed to ensure successful Heroku deployment:
+This document outlines how to set up and run the PyAirbyte MCP Server locally. The server now requires local MCP configuration only and does not support remote deployment.
 
-### 1. Project Structure Simplification
-**Problem**: The original project had two main.py files - one in the root and one in a subdirectory, creating unnecessary complexity and import issues.
-
-**Solution**: Consolidated everything into a single main.py file at the root level, eliminating the need for complex import path manipulation.
-
-### 2. Procfile Configuration
-**Problem**: The Procfile was configured for uvicorn with incorrect module reference.
-
-**Solution**: Updated Procfile to use Python directly:
-```
-web: python main.py
-```
-
-### 3. FastMCP Transport Configuration
-**Problem**: The server was configured with `transport="streamable-http"` which is not compatible with Heroku's HTTP routing.
-
-**Solution**: Changed to standard HTTP transport:
-```python
-mcp.run(transport="http", host="0.0.0.0", port=port)
-```
-
-### 4. Dependencies
-**Problem**: Missing uvicorn dependency that was referenced in original Procfile.
-
-**Solution**: Removed uvicorn from requirements.txt since we're using FastMCP's built-in server.
-
-## Deployment Checklist
+## Local Development Setup
 
 ### Prerequisites
-- [x] Heroku CLI installed
-- [x] Git repository initialized
-- [x] Heroku app created
+- Python 3.8 or higher
+- pip or uv for package management
+- OpenAI API key
 
-### Required Environment Variables
-Set these in your Heroku app configuration:
+### Installation Steps
 
-```bash
-# Required for OpenAI integration
-heroku config:set OPENAI_API_KEY=your_openai_api_key_here
-
-# Optional for file search functionality
-heroku config:set VECTOR_STORE_ID=your_vector_store_id_here
-```
-
-### Deployment Steps
-
-1. **Commit your changes:**
+1. **Clone the repository:**
    ```bash
-   git add .
-   git commit -m "Fix deployment configuration for Heroku"
+   git clone <repository-url>
+   cd airbyte-mcp
    ```
 
-2. **Deploy to Heroku:**
+2. **Install dependencies:**
    ```bash
-   git push heroku main
+   pip install -r requirements.txt
+   ```
+   
+   Or using uv:
+   ```bash
+   uv pip install -r requirements.txt
    ```
 
-3. **Verify deployment:**
-   ```bash
-   heroku logs --tail
-   ```
-
-4. **Test the endpoint:**
-   ```bash
-   curl https://your-app-name.herokuapp.com
-   ```
+3. **Configure MCP settings:**
+   Add the server configuration to your MCP client settings (see [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md))
 
 ## File Structure
 
 ```
 /
 ├── main.py                          # Complete MCP server implementation
-├── Procfile                         # Heroku process definition (fixed)
-├── requirements.txt                 # Python dependencies (cleaned)
-├── runtime.txt                      # Python version
+├── requirements.txt                 # Python dependencies
 ├── README.md                        # Project documentation
-├── test_deployment.py               # Local testing script
+├── MCP_CONFIGURATION.md             # MCP configuration guide
 ├── DEPLOYMENT_GUIDE.md             # This file
 └── airbyte-connector-catalog.json  # Connector definitions
 ```
@@ -89,66 +48,55 @@ heroku config:set VECTOR_STORE_ID=your_vector_store_id_here
 
 ### main.py
 - Complete MCP server implementation in a single file
-- Proper port configuration from environment variable
+- Requires OpenAI API key from MCP environment variables
 - Graceful handling of missing OpenAI credentials
-- Changed transport from "streamable-http" to "http"
+- Uses FastMCP for MCP protocol handling
 
-### Procfile
-- Uses `python main.py` instead of uvicorn
-- Heroku automatically sets PORT environment variable
+### requirements.txt
+- Python dependencies required for the server
+- Includes openai, python-dotenv, and fastmcp
 
 ### airbyte-connector-catalog.json
 - Connector definitions for source and destination configuration
-- Now located at the root level for easy access
+- Used to determine configuration keys for different connectors
 
 ## Testing Locally
 
-Run the test script to verify everything works:
-```bash
-python test_deployment.py
-```
+1. **Configure your MCP client** with the server settings (see MCP_CONFIGURATION.md)
+
+2. **Start your MCP client** (Cline, Cursor, etc.)
+
+3. **Verify the server is running** by checking the MCP client interface for available tools
+
+4. **Test the tool** by asking your AI assistant to generate a PyAirbyte pipeline
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**: Ensure the path manipulation in main.py is correct
-2. **Port Binding**: Heroku sets the PORT environment variable automatically
-3. **OpenAI Errors**: Set OPENAI_API_KEY in Heroku config vars
-4. **File Search**: VECTOR_STORE_ID is optional but recommended for full functionality
+1. **Import Errors**: Ensure all dependencies are installed correctly
+2. **OpenAI Errors**: Verify your OPENAI_API_KEY is set in MCP configuration
+3. **File Search**: VECTOR_STORE_ID is optional but recommended for full functionality
+4. **Path Issues**: Ensure the path in MCP configuration points to the correct main.py location
 
-### Logs
-Monitor deployment with:
-```bash
-heroku logs --tail --app your-app-name
-```
+### Debugging
 
-## MCP Client Configuration
-
-Once deployed, clients can connect using:
-
-```json
-{
-  "mcpServers": {
-    "pyairbyte-mcp": {
-      "url": "https://your-app-name.herokuapp.com",
-      "description": "Hosted PyAirbyte MCP server for generating pipelines"
-    }
-  }
-}
-```
+Check the MCP client logs for error messages:
+- Look for connection errors
+- Verify the OpenAI client initialization
+- Check for missing dependencies
 
 ## Security Notes
 
 - Never commit API keys to version control
-- Use Heroku config vars for sensitive information
-- The server gracefully handles missing OpenAI credentials
+- Keep your OpenAI API key secure and rotate it regularly
+- The API key is only used for generating PyAirbyte pipeline code
 - File search functionality is optional and fails gracefully
 
 ## Next Steps
 
-After successful deployment:
-1. Test the MCP server with a client
-2. Monitor logs for any runtime issues
-3. Set up monitoring/alerting if needed
-4. Consider adding health check endpoints
+After successful setup:
+1. Test the MCP server with your client
+2. Generate some PyAirbyte pipelines to verify functionality
+3. Explore the generated code and instructions
+4. Customize the server for your specific needs if required

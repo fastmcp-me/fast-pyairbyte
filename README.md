@@ -6,66 +6,13 @@ The PyAirbyte Managed Code Provider (MCP) service is an AI-powered backend that 
 
 - **Generates PyAirbyte pipeline code** based on user instructions and connector documentation.
 - **Uses OpenAI and file search** to provide context-aware code and instructions.
-- **Supports secure, environment-based configuration** for flexible deployments.
-
-The MCP server is deployed and accessible at:
-
-**https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com**
+- **Requires local MCP configuration** with your OpenAI API key.
 
 ---
 
 ## MCP Client Configuration
 
-There are two ways to use this MCP server:
-
-### Option 1: Hosted Server (Recommended for most users)
-
-Connect to the hosted server on Heroku. You'll provide your OpenAI API key when calling the tool.
-
-#### For Cline (VS Code Extension)
-
-Add this configuration to your Cline MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "pyairbyte-mcp": {
-      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "disabled": false,
-      "autoApprove": [],
-      "timeout": 30
-    }
-  }
-}
-```
-
-**Important for Cline**: Create a `.env` file in your project directory with your OpenAI API key:
-```
-OPENAI_API_KEY=your-openai-api-key-here
-```
-
-*Note: Cline's MCP settings schema doesn't support the `env` field for remote servers. The server will automatically use the OPENAI_API_KEY from your local .env file.*
-
-#### For Cursor
-
-Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "pyairbyte-mcp": {
-      "url": "https://pyairbyte-mcp-7b7b8566f2ce.herokuapp.com/mcp",
-      "env": {
-        "OPENAI_API_KEY": "your-openai-api-key-here"
-      }
-    }
-  }
-}
-```
-
-*Note: Cursor supports the `env` field for passing environment variables to remote servers.*
-
-### Option 2: Local Server (For development or custom configurations)
+### Local Server Configuration
 
 Run the server locally with your own OpenAI API key. See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for detailed setup instructions.
 
@@ -76,13 +23,13 @@ Add this configuration to your Cline MCP settings:
 ```json
 {
   "mcpServers": {
-    "pyairbyte-mcp-local": {
+    "pyairbyte-mcp": {
       "command": "python",
       "args": ["/path/to/airbyte-mcp/main.py"],
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
       },
-      "description": "Local PyAirbyte MCP server"
+      "description": "PyAirbyte MCP server"
     }
   }
 }
@@ -95,50 +42,37 @@ Add this to your Cursor MCP configuration file (`.cursor/mcp.json`):
 ```json
 {
   "mcpServers": {
-    "pyairbyte-mcp-local": {
+    "pyairbyte-mcp": {
       "command": "python",
       "args": ["/path/to/airbyte-mcp/main.py"],
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
       },
-      "description": "Local PyAirbyte MCP server"
+      "description": "PyAirbyte MCP server"
     }
   }
 }
 ```
 
-### Configuration Notes
+### Configuration Requirements
 
-#### Hosted Server
-- **Cline**: Uses a local `.env` file for the OpenAI API key (MCP settings schema doesn't support `env` field for remote servers)
-- **Cursor**: Supports passing OpenAI API key via `env` field in MCP configuration
-- The server uses Server-Sent Events (SSE) for communication via the `/mcp` endpoint
-- Uses the standard MCP fetch protocol via npx
-
-#### Local Server
 - Requires Python and the necessary dependencies installed locally
 - You must provide your own OpenAI API key via MCP environment variables
 - See [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md) for complete setup instructions
-- Allows for custom configurations and development
 
 ### Server Environment Variables
 
-The server uses environment variables from multiple sources:
-
-#### MCP Configuration (Required for local servers, supported by Cursor for remote servers)
+#### MCP Configuration (Required)
 - **OPENAI_API_KEY**: OpenAI API key for accessing GPT models and file search functionality
 
-#### .env File (Required for Cline with remote server, optional for local servers)
-- **OPENAI_API_KEY**: OpenAI API key (required for Cline when using remote server)
+#### Optional Environment Variables
 - **VECTOR_STORE_ID**: OpenAI Vector Store ID for enhanced file search capabilities
-- **PORT**: Port number for the server (defaults to 8000, mainly used for Heroku deployment)
+- **PORT**: Port number for the server (defaults to 8000)
 
 ### Security Note
 
-- **Cline**: Uses local `.env` file for API key when connecting to remote server
-- **Cursor**: Can pass API key via MCP configuration for remote servers
-- **Local servers**: Use MCP environment variables for API key configuration
-- This approach ensures secure API key handling while accommodating different client capabilities
+- API keys are provided via MCP environment variables in the configuration
+- This ensures secure API key handling through the MCP protocol
 
 ---
 
@@ -248,14 +182,3 @@ For local development and testing:
 3. Set up your environment variables (see [MCP_CONFIGURATION.md](./MCP_CONFIGURATION.md))
 4. Run the server: `python main.py`
 5. Configure your MCP client to connect to the local server
-
----
-
-## Deployment
-
-This MCP server is deployed on Heroku and ready to use. The configuration separates concerns:
-
-- **Client Configuration**: Uses the standard MCP fetch protocol via npx
-- **Server Environment**: All sensitive configuration is set as environment variables on the server
-
-This approach ensures no sensitive information needs to be shared in client configurations, while the server handles all authentication and external service integration securely.
