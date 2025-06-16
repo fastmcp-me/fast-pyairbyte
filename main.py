@@ -785,7 +785,7 @@ async def handle_mcp_jsonrpc(request: Request):
                                     }
                                 },
                                 "required": ["source_name", "destination_name"],
-                                "additionalProperties": false
+                                "additionalProperties": False
                             }
                         }
                     ]
