@@ -609,10 +609,12 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-# Try using the stdio app and manually creating HTTP endpoints
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse
 import json
+import asyncio
+from typing import AsyncGenerator
 
 app = FastAPI(title="PyAirbyte MCP Server")
 
@@ -641,15 +643,70 @@ async def debug_requests(request, call_next):
     logging.info(f"Response status: {response.status_code}")
     return response
 
-# Create a manual MCP endpoint that handles the JSON-RPC calls
-@app.post("/mcp/")
+# SSE Event Generator
+async def sse_generator(request: Request) -> AsyncGenerator[str, None]:
+    """Generate SSE events for MCP communication"""
+    try:
+        # Send initial connection event
+        yield "event: connected\ndata: {\"type\": \"connected\"}\n\n"
+        
+        # Keep connection alive and handle incoming messages
+        while True:
+            # In a real implementation, you'd handle bidirectional communication here
+            # For now, we'll just keep the connection alive
+            await asyncio.sleep(30)  # Send keepalive every 30 seconds
+            yield "event: keepalive\ndata: {\"type\": \"keepalive\"}\n\n"
+            
+    except asyncio.CancelledError:
+        logging.info("SSE connection cancelled")
+        raise
+    except Exception as e:
+        logging.error(f"Error in SSE generator: {e}")
+        yield f"event: error\ndata: {{\"error\": \"{str(e)}\"}}\n\n"
+
+# SSE endpoint for MCP connections
+@app.get("/mcp")
+@app.get("/mcp/")
+async def handle_mcp_sse(request: Request):
+    """Handle MCP connections via Server-Sent Events"""
+    accept_header = request.headers.get("accept", "")
+    
+    # Check if client accepts SSE
+    if "text/event-stream" in accept_header:
+        logging.info("Establishing SSE connection for MCP")
+        return StreamingResponse(
+            sse_generator(request),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "*",
+            }
+        )
+    else:
+        # Fallback to JSON-RPC for non-SSE clients
+        return JSONResponse(
+            content={
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32600,
+                    "message": "This endpoint requires SSE. Use POST for JSON-RPC or include 'text/event-stream' in Accept header."
+                }
+            },
+            status_code=400
+        )
+
+# JSON-RPC endpoint for direct API calls
 @app.post("/mcp")
-async def handle_mcp_request(request: Request):
-    """Handle MCP JSON-RPC requests manually"""
+@app.post("/mcp/")
+async def handle_mcp_jsonrpc(request: Request):
+    """Handle MCP JSON-RPC requests"""
     try:
         body = await request.body()
         data = json.loads(body)
-        logging.info(f"Parsed MCP request: {data}")
+        logging.info(f"Parsed MCP JSON-RPC request: {data}")
         
         # Handle different MCP methods
         method = data.get("method")
@@ -697,8 +754,6 @@ async def handle_mcp_request(request: Request):
                     "result": result
                 }
                 
-                # Create response with proper headers
-                from fastapi.responses import JSONResponse
                 return JSONResponse(
                     content=response_data,
                     headers={
@@ -709,7 +764,7 @@ async def handle_mcp_request(request: Request):
         
         # Handle tools/list method
         elif method == "tools/list":
-            return {
+            return JSONResponse(content={
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {
@@ -735,11 +790,11 @@ async def handle_mcp_request(request: Request):
                         }
                     ]
                 }
-            }
+            })
         
         # Handle initialize method
         elif method == "initialize":
-            return {
+            return JSONResponse(content={
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": {
@@ -752,28 +807,34 @@ async def handle_mcp_request(request: Request):
                         "version": "1.0.0"
                     }
                 }
-            }
+            })
         
         else:
-            return {
+            return JSONResponse(content={
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "error": {
                     "code": -32601,
                     "message": f"Method not found: {method}"
                 }
-            }
+            })
             
     except Exception as e:
-        logging.error(f"Error handling MCP request: {e}")
-        return {
+        logging.error(f"Error handling MCP JSON-RPC request: {e}")
+        return JSONResponse(content={
             "jsonrpc": "2.0",
             "id": data.get("id") if 'data' in locals() else None,
             "error": {
                 "code": -32603,
                 "message": f"Internal error: {str(e)}"
             }
-        }
+        })
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "pyairbyte-mcp-server"}
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
