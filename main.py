@@ -566,17 +566,11 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-# Try using the direct app property instead of streamable_http_app
-try:
-    app = mcp.app
-    logging.info("Using mcp.app for FastAPI application")
-except AttributeError:
-    # Fallback to streamable_http_app if app property doesn't exist
-    app = mcp.streamable_http_app()
-    logging.info("Using mcp.streamable_http_app() for FastAPI application")
+# Use the HTTP server mode for MCP
+app = mcp.create_app()
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Run the MCP server directly instead of through uvicorn
+    mcp.run()
