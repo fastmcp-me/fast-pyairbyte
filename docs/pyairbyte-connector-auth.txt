@@ -1,0 +1,324 @@
+airbyte.secrets
+Secrets management for PyAirbyte.
+
+PyAirbyte provides a secrets management system that allows you to securely store and retrieve sensitive information. This module provides the secrets functionality.
+
+Secrets Management
+PyAirbyte can auto-import secrets from the following sources:
+
+Environment variables.
+Variables defined in a local .env ("Dotenv") file.
+Google Colab secrets.
+Manual entry via getpass.
+Note: You can also build your own secret manager by subclassing the CustomSecretManager implementation. For more information, see the airbyte.secrets.CustomSecretManager reference docs.
+
+Retrieving Secrets
+To retrieve a secret, use the get_secret() function. For example:
+
+import airbyte as ab
+
+source = ab.get_source("source-github")
+source.set_config(
+   "credentials": {
+      "personal_access_token": ab.get_secret("GITHUB_PERSONAL_ACCESS_TOKEN"),
+   }
+)
+By default, PyAirbyte will search all available secrets sources. The get_secret() function also accepts an optional sources argument of specific source names (SecretSourceEnum) and/or secret manager objects to check.
+
+By default, PyAirbyte will prompt the user for any requested secrets that are not provided via other secret managers. You can disable this prompt by passing allow_prompt=False to get_secret().
+
+Secrets Auto-Discovery
+If you have a secret matching an expected name, PyAirbyte will automatically use it. For example, if you have a secret named GITHUB_PERSONAL_ACCESS_TOKEN, PyAirbyte will automatically use it when configuring the GitHub source.
+
+The naming convention for secrets is as {CONNECTOR_NAME}_{PROPERTY_NAME}, for instance SNOWFLAKE_PASSWORD and BIGQUERY_CREDENTIALS_PATH.
+
+PyAirbyte will also auto-discover secrets for interop with hosted Airbyte: AIRBYTE_CLOUD_API_URL, AIRBYTE_CLOUD_API_KEY, etc.
+
+Custom Secret Managers
+If you need to build your own secret manager, you can subclass the airbyte.secrets.CustomSecretManager class. This allows you to build a custom secret manager that can be used with the get_secret() function, securely storing and retrieving secrets as needed.
+
+API Reference
+_Below are the classes and functions available in the airbyte.secrets module._
+
+def get_secret(
+	secret_name: str,
+	/,
+	*,
+	sources: list[SecretManager | SecretSourceEnum] | None = None,
+	allow_prompt: bool = True,
+	**kwargs: dict[str, typing.Any]
+) -> SecretString:
+Get a secret from the environment.
+
+The optional sources argument of enum type SecretSourceEnum or list of SecretSourceEnum options. If left blank, all available sources will be checked. If a list of SecretSourceEnum entries is passed, then the sources will be checked using the provided ordering.
+
+If allow_prompt is True or if SecretSourceEnum.PROMPT is declared in the source arg, then the user will be prompted to enter the secret if it is not found in any of the other sources.
+
+class SecretSourceEnum(builtins.str, enum.Enum):
+Enumeration of secret sources supported by PyAirbyte.
+
+ENV = <SecretSourceEnum.ENV: 'env'>
+DOTENV = <SecretSourceEnum.DOTENV: 'dotenv'>
+GOOGLE_COLAB = <SecretSourceEnum.GOOGLE_COLAB: 'google_colab'>
+GOOGLE_GSM = <SecretSourceEnum.GOOGLE_GSM: 'google_gsm'>
+PROMPT = <SecretSourceEnum.PROMPT: 'prompt'>
+Inherited Members
+enum.Enum namevalue
+builtins.str encodereplacesplitrsplitjoincapitalizecasefoldtitlecentercountexpandtabsfindpartitionindexljustlowerlstriprfindrindexrjustrstriprpartitionsplitlinesstripswapcasetranslateupperstartswithendswithremoveprefixremovesuffixisasciiislowerisupperistitleisspaceisdecimalisdigitisnumericisalphaisalnumisidentifierisprintablezfillformatformat_mapmaketrans
+class SecretString(builtins.str):
+A string that represents a secret.
+
+This class is used to mark a string as a secret. When a secret is printed, it will be masked to prevent accidental exposure of sensitive information when debugging or when printing containing objects like dictionaries.
+
+To create a secret string, simply instantiate the class with any string value:
+
+
+secret = SecretString("my_secret_password")
+
+
+def is_empty(self) -> bool:
+Check if the secret is an empty string.
+
+def is_json(self) -> bool:
+Check if the secret string is a valid JSON string.
+
+def parse_json(self) -> dict:
+Parse the secret string as JSON.
+
+@classmethod
+def validate(
+	cls,
+	v: Any,
+	info: pydantic_core.core_schema.ValidationInfo
+) -> SecretString:
+Validate the input value is valid as a secret string.
+
+Inherited Members
+builtins.str encodereplacesplitrsplitjoincapitalizecasefoldtitlecentercountexpandtabsfindpartitionindexljustlowerlstriprfindrindexrjustrstriprpartitionsplitlinesstripswapcasetranslateupperstartswithendswithremoveprefixremovesuffixisasciiislowerisupperistitleisspaceisdecimalisdigitisnumericisalphaisalnumisidentifierisprintablezfillformatformat_mapmaketrans
+class SecretHandle:
+A handle for a secret in a secret manager.
+
+This class is used to store a reference to a secret in a secret manager. The secret is not retrieved until the get_value() or parse_json() methods are called.
+
+SecretHandle(parent: SecretManager, secret_name: str)
+Instantiate a new secret handle.
+
+parent
+secret_name
+def get_value(self) -> SecretString:
+Get the secret from the secret manager.
+
+Subclasses can optionally override this method to provide a more optimized code path.
+
+def parse_json(self) -> dict:
+Parse the secret as JSON.
+
+This method is a convenience method to parse the secret as JSON without needing to call get_value() first. If the secret is not a valid JSON string, a PyAirbyteInputError will be raised.
+
+def write_to_file(self, file_path: pathlib.Path, /, *, silent: bool = False) -> None:
+Write the secret to a file.
+
+If silent is True, the method will not print any output to the console. Otherwise, the method will print a message to the console indicating the file path to which the secret is being written.
+
+This method is a convenience method that writes the secret to a file as text.
+
+class SecretManager(abc.ABC):
+Abstract base class for secret managers.
+
+Secret managers are used to retrieve secrets from a secret store.
+
+By registering a secret manager, PyAirbyte can automatically locate and retrieve secrets from the secret store when needed. This allows you to securely store and access sensitive information such as API keys, passwords, and other credentials without hardcoding them in your code.
+
+To create a custom secret manager, subclass this class and implement the get_secret method. By default, the secret manager will be automatically registered as a global secret source, but will not replace any existing secret sources. To customize this behavior, override the auto_register and replace_existing attributes in your subclass as needed.
+
+Note: Registered secrets managers always have priority over the default secret sources such as environment variables, dotenv files, and Google Colab secrets. If multiple secret managers are registered, the last one registered will take priority.
+
+SecretManager()
+Instantiate the new secret manager.
+
+replace_existing = False
+as_backup = False
+@abstractmethod
+def get_secret(self, secret_name: str) -> SecretString | None:
+Get a named secret from the secret manager.
+
+This method should be implemented by subclasses to retrieve secrets from the secret store. If the secret is not found, the method should return None.
+
+class EnvVarSecretManager(airbyte.secrets.SecretManager):
+Secret manager that retrieves secrets from environment variables.
+
+name = 'env'
+def get_secret(self, secret_name: str) -> SecretString | None:
+Get a named secret from the environment.
+
+Inherited Members
+SecretManager SecretManagerreplace_existingas_backup
+class DotenvSecretManager(airbyte.secrets.SecretManager):
+Secret manager that retrieves secrets from a .env file.
+
+name = 'dotenv'
+def get_secret(self, secret_name: str) -> SecretString | None:
+Get a named secret from the .env file.
+
+Inherited Members
+SecretManager SecretManagerreplace_existingas_backup
+class ColabSecretManager(airbyte.secrets.SecretManager):
+Secret manager that retrieves secrets from Google Colab user secrets.
+
+ColabSecretManager()
+Initialize the Google Colab secret manager.
+
+name = 'google_colab'
+def get_secret(self, secret_name: str) -> SecretString | None:
+Get a named secret from Google Colab user secrets.
+
+Inherited Members
+SecretManager replace_existingas_backup
+class SecretsPrompt(airbyte.secrets.SecretManager):
+Secret manager that prompts the user to enter a secret.
+
+name = 'prompt'
+def get_secret(self, secret_name: str) -> SecretString | None:
+Prompt the user to enter a secret.
+
+As a security measure, the secret is not echoed to the terminal when typed.
+
+Inherited Members
+SecretManager SecretManagerreplace_existingas_backup
+class CustomSecretManager(airbyte.secrets.SecretManager, abc.ABC):
+Custom secret manager that retrieves secrets from a custom source.
+
+This class is a convenience class that can be used to create custom secret managers. By default, custom secrets managers are auto-registered during creation.
+
+CustomSecretManager()
+Initialize the custom secret manager.
+
+auto_register = True
+replace_existing = False
+as_backup = False
+def register(
+	self,
+	*,
+	replace_existing: bool | None = None,
+	as_backup: bool | None = None
+) -> None:
+Register the secret manager as global secret source.
+
+This makes the secret manager available to the get_secret function and allows it to be used automatically as a source for secrets.
+
+If replace_existing is True, the secret manager will replace all existing secrets sources, including the default secret managers such as environment variables, dotenv files, and Google Colab secrets. If replace_existing is None or not provided, the default behavior will be used from the replace_existing of the class (False unless overridden by the subclass).
+
+Inherited Members
+SecretManager get_secret
+class GoogleGSMSecretManager(airbyte.secrets.CustomSecretManager):
+Secret manager that retrieves secrets from Google Secrets Manager (GSM).
+
+This class inherits from CustomSecretManager and also adds methods that are specific to this implementation: fetch_secrets(), fetch_secrets_by_label() and fetch_connector_secrets().
+
+This secret manager is not enabled by default. To use it, you must provide the project ID and the credentials for a service account with the necessary permissions to access the secrets.
+
+The fetch_connector_secret() method assumes a label name of connector matches the name of the connector (source-github, destination-snowflake, etc.)
+
+GoogleGSMSecretManager(
+	project: str,
+	*,
+	credentials_path: str | None = None,
+	credentials_json: str | SecretString | None = None,
+	auto_register: bool = False,
+	as_backup: bool = False
+)
+Instantiate a new Google GSM secret manager instance.
+
+You can provide either the path to the credentials file or the JSON contents of the credentials file. If both are provided, a PyAirbyteInputError will be raised.
+
+name = 'google_gsm'
+auto_register = False
+as_backup = False
+replace_existing = False
+CONNECTOR_LABEL = 'connector'
+The label key used to filter secrets by connector name.
+
+project
+secret_client
+def get_secret(self, secret_name: str) -> SecretString:
+Get a named secret from Google Colab user secrets.
+
+def get_secret_handle(self, secret_name: str) -> airbyte.secrets.google_gsm.GSMSecretHandle:
+Fetch secret in the secret manager, using the secret name.
+
+Unlike get_secret, this method returns a GSMSecretHandle object, which can be used to inspect the secret's labels and other metadata.
+
+Arguments:
+secret_name (str): The name of the connector to filter by.
+Returns:
+GSMSecretHandle: A handle for the matching secret.
+
+def fetch_secrets(
+	self,
+	*,
+	filter_string: str
+) -> Iterable[airbyte.secrets.google_gsm.GSMSecretHandle]:
+List all available secrets in the secret manager.
+
+Example filter strings:
+
+labels.connector=source-bigquery: Filter for secrets with the labe 'source-bigquery'.
+Arguments:
+filter_string (str): A filter string to apply to the list of secrets, following the format described in the Google Secret Manager documentation: https://cloud.google.com/secret-manager/docs/filtering
+Returns:
+Iterable[GSMSecretHandle]: An iterable of GSMSecretHandle objects for the matching secrets.
+
+def fetch_secrets_by_label(
+	self,
+	label_key: str,
+	label_value: str
+) -> Iterable[airbyte.secrets.google_gsm.GSMSecretHandle]:
+List all available secrets in the secret manager.
+
+Arguments:
+label_key (str): The key of the label to filter by.
+label_value (str): The value of the label to filter by.
+Returns:
+Iterable[GSMSecretHandle]: An iterable of GSMSecretHandle objects for the matching secrets.
+
+def fetch_connector_secrets(
+	self,
+	connector_name: str
+) -> Iterable[airbyte.secrets.google_gsm.GSMSecretHandle]:
+Fetch secrets in the secret manager, using the connector name as a filter for the label.
+
+The label key used to filter the secrets is defined by the CONNECTOR_LABEL attribute, which defaults to 'connector'.
+
+Arguments:
+connector_name (str): The name of the connector to filter by.
+Returns:
+Iterable[GSMSecretHandle]: An iterable of GSMSecretHandle objects for the matching secrets.
+
+def fetch_connector_secret(self, connector_name: str) -> airbyte.secrets.google_gsm.GSMSecretHandle:
+Fetch secret in the secret manager, using the connector name as a filter for the label.
+
+This method is a convenience method that returns the first secret found for the connector.
+
+The label key used to filter the secrets is defined by the CONNECTOR_LABEL attribute, which defaults to 'connector'.
+
+Arguments:
+connector_name (str): The name of the connector to filter by.
+Returns:
+GSMSecretHandle: A handle for the matching secret.
+
+Inherited Members
+CustomSecretManager register
+def register_secret_manager(
+	secret_manager: CustomSecretManager,
+	*,
+	as_backup: bool = False,
+	replace_existing: bool = False
+) -> None:
+Register a custom secret manager.
+
+def disable_secret_source(
+	source: SecretManager | SecretSourceEnum
+) -> None:
+Disable one of the default secrets sources.
+
+This function can accept either a SecretManager instance, a SecretSourceEnum enum value, or a string representing the name of the source to disable.

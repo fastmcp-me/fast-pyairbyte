@@ -1,0 +1,173 @@
+Certainly! Below is a comprehensive overview of the PyAirbyte API, consolidating key information from the official documentation.
+
+⸻
+
+PyAirbyte API Reference
+
+PyAirbyte is a Python library that integrates Airbyte’s data movement capabilities into Python applications, allowing developers to programmatically interact with various data sources and destinations.
+
+Table of Contents
+	1.	Getting Started
+	•	Reading Data
+	•	Writing to SQL Caches
+	•	Writing to Destination Connectors
+	2.	PyAirbyte API
+	•	Importing as ab
+	•	Navigating the API
+	3.	API Reference
+	•	get_source
+	•	get_destination
+	•	get_secret
+	•	Source
+	•	Destination
+	•	ReadResult
+	•	WriteResult
+	•	CachedDataset
+	•	Document
+	•	SecretManager
+	4.	Submodules
+	•	airbyte.sources
+	•	airbyte.destinations
+	•	airbyte.caches
+	•	airbyte.datasets
+	•	airbyte.documents
+	•	airbyte.secrets
+	•	airbyte.results
+	•	airbyte.experimental
+
+Getting Started
+
+Reading Data
+
+To connect to any of the hundreds of sources supported by Airbyte, use the get_source method. Once connected, you can read data using the Source.read method. ￼
+
+from airbyte import get_source
+
+source = get_source(
+    "source-faker",
+    config={},
+)
+read_result = source.read()
+
+for record in read_result["users"]:
+    print(record)
+
+For more information, see the airbyte.sources module.
+
+Writing to SQL Caches
+
+Data can be written to caches using various SQL-based cache implementations, including Postgres, BigQuery, Snowflake, DuckDB, and MotherDuck. If no cache is specified, PyAirbyte defaults to using a local DuckDB cache.
+
+from airbyte import get_source
+from airbyte.caches import DuckDBCache
+
+source = get_source(
+    "source-faker",
+    config={},
+)
+cache = DuckDBCache(database="my_cache.db")
+read_result = source.read(cache=cache)
+
+For more information, see the airbyte.caches module.
+
+Writing to Destination Connectors
+
+Data can be written to destinations using the Destination.write method. Connect to destinations using the get_destination method. Note that Docker is required to run Java-based destinations.
+
+from airbyte import get_source, get_destination
+
+source = get_source(
+    "source-faker",
+    config={},
+)
+destination = get_destination(
+    "destination-csv",
+    config={"destination_path": "/path/to/output/"},
+)
+read_result = source.read()
+destination.write(read_result)
+
+For more information, see the airbyte.destinations module. ￼
+
+PyAirbyte API
+
+Importing as ab
+
+It’s recommended to import PyAirbyte using the alias ab for concise and readable code:
+
+import airbyte as ab
+
+Navigating the API
+
+Many PyAirbyte classes and functions are available at the top level of the airbyte module. For example:
+
+source = ab.get_source(...)
+destination = ab.get_destination(...)
+
+For a detailed list of available classes and functions, refer to the API Reference section below.
+
+API Reference
+
+get_source
+
+Connects to a specified data source. ￼
+
+from airbyte import get_source
+
+source = get_source(
+    "source-name",
+    config={...},
+)
+
+For more details, see the airbyte.sources module. ￼
+
+get_destination
+
+Connects to a specified data destination. ￼
+
+from airbyte import get_destination
+
+destination = get_destination(
+    "destination-name",
+    config={...},
+)
+
+For more details, see the airbyte.destinations module.
+
+get_secret
+
+Retrieves a secret from the configured secret manager. ￼
+
+from airbyte import get_secret
+
+api_key = get_secret("API_KEY")
+
+For more information, see the airbyte.secrets module.
+
+Source
+
+Represents a data source in PyAirbyte.
+
+from airbyte import get_source
+
+source = get_source("source-name", config={...})
+
+For more details, see the airbyte.sources module.
+
+Destination
+
+Represents a data destination in PyAirbyte.
+
+from airbyte import get_destination
+
+destination = get_destination("destination-name", config={...})
+
+For more details, see the airbyte.destinations module.
+
+ReadResult
+
+Represents the result of a read operation from a source. ￼
+
+read_result = source.read()
+
+For more information, see the [airbyte.results](#airby
