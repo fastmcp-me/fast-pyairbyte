@@ -484,12 +484,8 @@ async def generate_pyairbyte_pipeline(
         logging.error(error_msg)
         ctx.error(error_msg)
         return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Error: {error_msg}"
-                }
-            ]
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
         }
 
     # Create OpenAI client with API key
@@ -499,12 +495,8 @@ async def generate_pyairbyte_pipeline(
         logging.error(error_msg)
         ctx.error(error_msg)
         return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Error: {error_msg}"
-                }
-            ]
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
         }
 
     output_to_dataframe = destination_name.lower() == "dataframe"
@@ -539,15 +531,12 @@ async def generate_pyairbyte_pipeline(
     try:
         generated_code = generate_pyairbyte_code(source_name, destination_name, source_config_keys, dest_config_keys, output_to_dataframe)
     except Exception as e:
+        error_msg = f"An internal error occurred during code generation: {e}"
         logging.error(f"Error during code generation: {e}")
         ctx.error(f"Failed to generate Python code: {e}")
         return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Error: An internal error occurred during code generation: {e}"
-                }
-            ]
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
         }
 
 
@@ -555,15 +544,12 @@ async def generate_pyairbyte_pipeline(
     try:
         instructions = generate_instructions(source_name, destination_name, source_config_keys, dest_config_keys, output_to_dataframe, generated_code)
     except Exception as e:
+        error_msg = f"An internal error occurred during instruction generation: {e}"
         logging.error(f"Error during instruction generation: {e}")
         ctx.error(f"Failed to generate instructions: {e}")
         return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Error: An internal error occurred during instruction generation: {e}"
-                }
-            ]
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
         }
 
 
@@ -580,7 +566,7 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-app = mcp.streamable_http_app()
+app = mcp.app
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
