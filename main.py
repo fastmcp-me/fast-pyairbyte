@@ -477,7 +477,7 @@ async def generate_pyairbyte_pipeline(
 
     # Get OpenAI API key from MCP configuration only
     openai_api_key = os.environ.get("OPENAI_API_KEY")
-    
+
     if not openai_api_key:
         error_msg = "OPENAI_API_KEY not found. Please configure it in your MCP settings environment variables."
         logging.error(error_msg)
