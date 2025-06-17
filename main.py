@@ -566,7 +566,14 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-app = mcp.streamable_http_app()
+# Try using the direct app property instead of streamable_http_app
+try:
+    app = mcp.app
+    logging.info("Using mcp.app for FastAPI application")
+except AttributeError:
+    # Fallback to streamable_http_app if app property doesn't exist
+    app = mcp.streamable_http_app()
+    logging.info("Using mcp.streamable_http_app() for FastAPI application")
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
