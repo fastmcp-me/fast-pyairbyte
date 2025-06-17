@@ -22,7 +22,8 @@ mcp = FastMCP(
     "pyairbyte-mcp-server",
     description="Generates PyAirbyte pipelines with instructions using context from documentation.",
     # Add dependencies required by *this server script*
-    dependencies=["openai", "python-dotenv"]
+    dependencies=["openai", "python-dotenv"],
+    port=port  # Use the port from environment variable
 )
 
 # --- OpenAI Client ---
@@ -570,18 +571,19 @@ async def generate_pyairbyte_pipeline(
     ctx.info("Pipeline generation complete.")
 
     # --- Return Result ---
-    # Return as a structured object that MCP expects
+    # Return as a structured dictionary or a single markdown string
     return {
-        "content": [
-            {
-                "type": "text",
-                "text": f"Successfully generated PyAirbyte pipeline for {source_name} -> {destination_name}.\n\n{instructions}"
-            }
-        ]
+        "message": f"Successfully generated PyAirbyte pipeline instructions and code for {source_name} -> {destination_name}.",
+        "instructions": instructions,
+        # "code": generated_code # Code is already included within instructions markdown
     }
 
 
-# --- Run the server ---
+# --- Expose the FastAPI app for deployment ---
+app = mcp.app
+
+# --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    mcp.run()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=port)
