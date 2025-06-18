@@ -18,12 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 port = int(os.environ.get("PORT", 8000))
 
 # --- Initialize MCP Server ---
-mcp = FastMCP(
-    "pyairbyte-mcp-server",
-    description="Generates PyAirbyte pipelines with instructions using context from documentation.",
-    # Add dependencies required by *this server script*
-    dependencies=["openai", "python-dotenv"]
-)
+mcp = FastMCP("pyairbyte-mcp-server")
 
 # --- OpenAI Client ---
 # No global OpenAI client - will be created per request with user-provided API key

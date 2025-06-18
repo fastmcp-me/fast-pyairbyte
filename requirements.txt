@@ -1,4 +1,4 @@
-fastmcp==2.8.1
+fastmcp>=2.8.0
 openai
 python-dotenv
 airbyte
