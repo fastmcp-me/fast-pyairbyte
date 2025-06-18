@@ -564,17 +564,15 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.responses import JSONResponse
 
-# Create a Starlette app and mount the MCP SSE server
+# Create the MCP SSE app
+mcp_app = mcp.sse_app()
+
+# Create a Starlette app and mount the MCP SSE server at root
 app = Starlette(
     routes=[
-        Mount('/mcp', app=mcp.sse_app()),
+        Mount('/', app=mcp_app),
     ]
 )
-
-# Add a health check endpoint at root
-@app.route('/')
-async def health_check(request):
-    return JSONResponse({"status": "healthy", "service": "pyairbyte-mcp-server"})
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
