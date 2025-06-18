@@ -564,10 +564,14 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.responses import JSONResponse
 
-# Create a Starlette app and mount the MCP SSE server at /mcp
+# Get the MCP SSE app
+mcp_sse_app = mcp.sse_app()
+
+# Create a Starlette app and mount the MCP SSE server at /mcp with trailing slash handling
 app = Starlette(
     routes=[
-        Mount('/mcp', app=mcp.sse_app()),
+        Mount('/mcp/', app=mcp_sse_app),
+        Mount('/mcp', app=mcp_sse_app),
     ]
 )
 
