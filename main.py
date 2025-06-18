@@ -566,11 +566,10 @@ async def generate_pyairbyte_pipeline(
 
 
 # --- Expose the FastAPI app for deployment ---
-# Use the HTTP server mode for MCP
-app = mcp.create_app()
+app = mcp.streamable_http_app()
 
 # --- Run the server (for direct execution, though Cursor uses stdio) ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    # Run the MCP server directly instead of through uvicorn
-    mcp.run()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=port)
