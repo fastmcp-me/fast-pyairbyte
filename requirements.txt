@@ -1,5 +1,6 @@
-fastmcp
+fastmcp==0.9.0
 openai
 python-dotenv
 airbyte
 pandas
+uvicorn
