@@ -3,7 +3,7 @@ import os
 import json
 import logging
 from typing import Optional, List, Dict, Any
-from mcp.server.fastmcp import FastMCP, Context
+from fastmcp import FastMCP, Context
 from openai import OpenAI, BadRequestError
 from dotenv import load_dotenv
 
@@ -559,28 +559,12 @@ async def generate_pyairbyte_pipeline(
     }
 
 
-# --- Expose the FastAPI app for deployment ---
-from starlette.applications import Starlette
-from starlette.routing import Route, Mount
-from starlette.responses import JSONResponse
-
-# Get the MCP SSE app
-mcp_sse_app = mcp.sse_app()
-
-# Add health check endpoint
-async def health_check(request):
-    return JSONResponse({"status": "healthy", "service": "pyairbyte-mcp-server"})
-
-# Create a Starlette app with Mount for the MCP app
-app = Starlette(
-    routes=[
-        Route('/', health_check),
-        Mount('/mcp/', app=mcp_sse_app),
-    ]
-)
-
-# --- Run the server (for direct execution, though Cursor uses stdio) ---
+# --- Run the server ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # Use FastMCP's built-in streamable HTTP transport for web deployment
+    mcp.run(
+        transport="streamable-http",
+        host="0.0.0.0",
+        port=port
+    )
