@@ -561,35 +561,21 @@ async def generate_pyairbyte_pipeline(
 
 # --- Expose the FastAPI app for deployment ---
 from starlette.applications import Starlette
-from starlette.routing import Route
+from starlette.routing import Route, Mount
 from starlette.responses import JSONResponse
 
 # Get the MCP SSE app
 mcp_sse_app = mcp.sse_app()
 
-# Create a custom ASGI handler that forwards requests to the MCP app
-async def mcp_handler(scope, receive, send):
-    # Modify the scope to remove the /mcp prefix
-    if scope['type'] == 'http':
-        path = scope['path']
-        if path.startswith('/mcp'):
-            # Remove /mcp prefix and ensure we have at least /
-            new_path = path[4:] or '/'
-            scope = scope.copy()
-            scope['path'] = new_path
-    
-    # Forward to the MCP SSE app
-    await mcp_sse_app(scope, receive, send)
-
 # Add health check endpoint
 async def health_check(request):
     return JSONResponse({"status": "healthy", "service": "pyairbyte-mcp-server"})
 
-# Create a Starlette app with direct route handling
+# Create a Starlette app with Mount for the MCP app
 app = Starlette(
     routes=[
         Route('/', health_check),
-        Route('/mcp{path:path}', mcp_handler),
+        Mount('/mcp/', app=mcp_sse_app),
     ]
 )
 
