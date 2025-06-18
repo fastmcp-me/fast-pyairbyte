@@ -22,10 +22,7 @@ mcp = FastMCP(
     "pyairbyte-mcp-server",
     description="Generates PyAirbyte pipelines with instructions using context from documentation.",
     # Add dependencies required by *this server script*
-    dependencies=["openai", "python-dotenv"],
-    port=port,  # Use the port from environment variable
-    # Add explicit HTTP transport configuration
-    transport="http"
+    dependencies=["openai", "python-dotenv"]
 )
 
 # --- OpenAI Client ---
