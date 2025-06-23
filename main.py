@@ -47,109 +47,222 @@ logging.info("Server configured to require OpenAI API key from each client reque
 
 # --- Helper Functions ---
 
-def get_connector_config_keys(connector_name: str, connector_type: str, catalog_path: str = "airbyte-connector-catalog.json") -> List[str]:
+async def get_connector_config_from_vector_store(connector_name: str, connector_type: str, vector_store_id: str, openai_client: OpenAI) -> List[str]:
     """
-    Parses the provided catalog file to find config keys for a connector.
-    NOTE: Assumes the catalog file is in the same directory or path is correct.
-          This is a simplified parser. Real-world usage might need better error handling.
+    Uses vector search to find connector configuration keys from the vector store.
+    
+    Args:
+        connector_name: The connector name (e.g., 'source-postgres', 'destination-snowflake')
+        connector_type: Either 'source' or 'destination'
+        vector_store_id: The OpenAI vector store ID
+        openai_client: The OpenAI client instance
+        
+    Returns:
+        List of configuration keys for the connector
     """
+    if not openai_client or not vector_store_id:
+        logging.error("OpenAI client or Vector Store ID not available for connector config retrieval.")
+        raise Exception("Vector store configuration is required but not available.")
+
+    # Construct a specific query for configuration details
+    query = f"""
+    Find the configuration schema and required fields for the Airbyte {connector_type} connector '{connector_name}'.
+    
+    Please provide:
+    1. All required configuration fields/keys
+    2. Authentication/credential fields (if any)
+    3. The exact field names as they appear in the connector specification
+    4. Whether any fields are nested under 'credentials' or other objects
+    
+    Format the response as a clear list of configuration keys that would be used as environment variables.
+    """
+    
+    logging.info(f"Querying vector store for {connector_type} connector: {connector_name}")
+    
     try:
-        # Attempt to read the catalog file relative to this script's location
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        full_catalog_path = os.path.join(script_dir, catalog_path)
-
-        if not os.path.exists(full_catalog_path):
-             logging.warning(f"Connector catalog file not found at: {full_catalog_path}. Cannot determine config keys.")
-             # Fallback: Try reading from current working directory if run differently
-             if os.path.exists(catalog_path):
-                 full_catalog_path = catalog_path
-             else:
-                 return ["config_key_1", "config_key_2"] # Generic fallback
-
-        with open(full_catalog_path, 'r') as f:
-            catalog = json.load(f)
-
-        for connector in catalog:
-            if connector.get("name") == connector_name and connector.get("type") == connector_type:
-                # Handle nested credentials common in some connectors
-                config_keys = list(connector.get("config", {}).keys())
-                if "credentials" in connector.get("config", {}) and isinstance(connector["config"]["credentials"], dict):
-                     credential_keys = list(connector["config"]["credentials"].keys())
-                     # Prefix credential keys for clarity in .env, e.g., CREDENTIALS_ACCESS_TOKEN
-                     config_keys.remove("credentials") # Remove the top-level 'credentials' key
-                     config_keys.extend([f"CREDENTIALS_{key.upper()}" for key in credential_keys])
-
-                # Convert to uppercase for .env convention
-                return [key.upper() for key in config_keys]
-
-        logging.warning(f"Connector '{connector_name}' of type '{connector_type}' not found in catalog.")
-        return ["config_key_1", "config_key_2"] # Generic fallback
-
-    except FileNotFoundError:
-        logging.error(f"Connector catalog file not found at path: {full_catalog_path}. Cannot determine config keys.")
-        return ["config_key_1", "config_key_2"] # Generic fallback
-    except json.JSONDecodeError:
-        logging.error(f"Error decoding JSON from catalog file: {full_catalog_path}.")
-        return ["config_key_1", "config_key_2"] # Generic fallback
+        # Use the enhanced file search to get connector information
+        search_result = await query_file_search(query, vector_store_id, openai_client)
+        
+        if "File search unavailable" in search_result or "Error during file search" in search_result:
+            logging.error(f"Vector search failed for {connector_name}: {search_result}")
+            raise Exception(f"Failed to retrieve connector configuration from vector store: {search_result}")
+        
+        # Parse the search result to extract configuration keys
+        config_keys = parse_config_keys_from_response(search_result, connector_name)
+        
+        if not config_keys:
+            logging.warning(f"No configuration keys found for {connector_name} in vector search result")
+            # Try a more specific query
+            fallback_query = f"What are the required environment variables and configuration parameters for {connector_name}?"
+            fallback_result = await query_file_search(fallback_query, vector_store_id, openai_client)
+            config_keys = parse_config_keys_from_response(fallback_result, connector_name)
+        
+        if not config_keys:
+            logging.error(f"Could not extract configuration keys for {connector_name} from vector search")
+            raise Exception(f"No configuration information found for connector '{connector_name}' in vector store")
+        
+        logging.info(f"Successfully retrieved {len(config_keys)} config keys for {connector_name}: {config_keys}")
+        return config_keys
+        
     except Exception as e:
-        logging.error(f"Error reading connector catalog: {e}")
-        return ["config_key_1", "config_key_2"] # Generic fallback
+        logging.error(f"Error retrieving connector config from vector store: {e}")
+        raise
+
+
+def parse_config_keys_from_response(response: str, connector_name: str) -> List[str]:
+    """
+    Parse configuration keys from the vector search response.
+    
+    Args:
+        response: The response text from vector search
+        connector_name: The connector name for context
+        
+    Returns:
+        List of configuration keys in uppercase format suitable for environment variables
+    """
+    config_keys = []
+    
+    # Common patterns to look for in the response
+    import re
+    
+    # Look for explicit lists of configuration keys
+    key_patterns = [
+        r'(?:config|configuration|field|parameter|key)(?:s)?[:\s]*["\']?([a-zA-Z_][a-zA-Z0-9_]*)["\']?',
+        r'["\']([a-zA-Z_][a-zA-Z0-9_]*)["\'](?:\s*:|\s*=)',
+        r'(?:required|needed|necessary)[^:]*:.*?["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']',
+        r'environment variable[s]?[:\s]*["\']?([A-Z_][A-Z0-9_]*)["\']?',
+        r'ENV[:\s]*["\']?([A-Z_][A-Z0-9_]*)["\']?'
+    ]
+    
+    # Common configuration field names to look for
+    common_fields = [
+        'host', 'port', 'database', 'username', 'password', 'api_key', 'access_token',
+        'secret_key', 'client_id', 'client_secret', 'token', 'auth_token', 'bearer_token',
+        'url', 'endpoint', 'server', 'schema', 'table', 'bucket', 'region', 'account',
+        'tenant_id', 'subscription_id', 'project_id', 'dataset_id', 'warehouse',
+        'role', 'authenticator', 'private_key', 'certificate', 'ssl_mode'
+    ]
+    
+    # Extract potential keys using patterns
+    for pattern in key_patterns:
+        matches = re.findall(pattern, response, re.IGNORECASE)
+        for match in matches:
+            if len(match) > 1 and match.lower() in [field.lower() for field in common_fields]:
+                config_keys.append(match.upper())
+    
+    # Look for credential-related fields that might be nested
+    credential_patterns = [
+        r'credential[s]?[^:]*:.*?["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']',
+        r'auth[^:]*:.*?["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']'
+    ]
+    
+    for pattern in credential_patterns:
+        matches = re.findall(pattern, response, re.IGNORECASE)
+        for match in matches:
+            if len(match) > 1:
+                config_keys.append(f"CREDENTIALS_{match.upper()}")
+    
+    # Remove duplicates and filter out very short or invalid keys
+    config_keys = list(set([key for key in config_keys if len(key) > 2 and key.isalnum() or '_' in key]))
+    
+    # If we still don't have keys, try to extract from common connector patterns
+    if not config_keys:
+        # Fallback: provide common keys based on connector type
+        if 'postgres' in connector_name.lower():
+            config_keys = ['HOST', 'PORT', 'DATABASE', 'USERNAME', 'PASSWORD', 'SCHEMA']
+        elif 'mysql' in connector_name.lower():
+            config_keys = ['HOST', 'PORT', 'DATABASE', 'USERNAME', 'PASSWORD']
+        elif 'snowflake' in connector_name.lower():
+            config_keys = ['ACCOUNT', 'USERNAME', 'PASSWORD', 'WAREHOUSE', 'DATABASE', 'SCHEMA', 'ROLE']
+        elif 'github' in connector_name.lower():
+            config_keys = ['CREDENTIALS_ACCESS_TOKEN', 'REPOSITORY']
+        elif 'google' in connector_name.lower():
+            config_keys = ['CREDENTIALS_SERVICE_ACCOUNT_KEY', 'PROJECT_ID']
+        elif 's3' in connector_name.lower():
+            config_keys = ['BUCKET', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REGION']
+        else:
+            # Generic fallback
+            config_keys = ['API_KEY', 'HOST', 'USERNAME', 'PASSWORD']
+    
+    return config_keys
 
 
 async def query_file_search(query: str, vector_store_id: str, openai_client: OpenAI) -> str:
-    """Uses OpenAI File Search (via Responses API) to get context."""
+    """Uses OpenAI Assistants API with file search to get context from vector store."""
     if not openai_client or not vector_store_id:
         logging.warning("OpenAI client or Vector Store ID not available. Skipping file search.")
         return "File search unavailable."
 
     logging.info(f"Performing file search with query: '{query}' in store '{vector_store_id}'")
     try:
-        # Using the Responses API as shown in openai-filesearch.txt examples
-        # We only need the text response here, not complex handling of calls/results yet.
-        # A simpler chat completion call might also work if file search is attached to the assistant/model.
-        # Using Responses API explicitly for file search tool:
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o", # Or your preferred model compatible with file search
-            messages=[
-                {"role": "user", "content": query}
-            ],
-            # The new way to use file search is via tool_resources in Assistants v2
-            # or potentially attached to the model if using Chat Completions directly with search capabilities.
-            # The example in openai-filesearch.txt uses client.responses.create, which seems deprecated or part of a different flow.
-            # Let's adapt using Chat Completions with a system message hinting at using the files.
-            # A more robust way would be using the Assistants API with file_search tool enabled.
-            # Simpler approach for now: Rely on a capable model and provide context in prompt.
-            # --- Alternative using Assistants API (more complex setup required) ---
-            # assistant = await openai_client.beta.assistants.create(...)
-            # thread = await openai_client.beta.threads.create(...)
-            # message = await openai_client.beta.threads.messages.create(...)
-            # run = await openai_client.beta.threads.runs.create( thread_id=thread.id, assistant_id=assistant.id, tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}})
-            # --- Sticking to Chat Completion for simplicity within MCP tool ---
-            # We'll add context retrieved via file search *manually* if needed,
-            # or rely on the LLM's training if it includes these docs.
-            # The file search *tool call* within the MCP tool isn't straightforward.
-            # Let's retrieve context *before* generating the final output.
-            #
-            # Re-evaluating: The goal is for the *MCP Tool* to use file search.
-            # The example in `openai-filesearch.txt` uses `client.responses.create` which looks like a specific endpoint.
-            # Let's try simulating that structure or using Chat Completion and hoping it leverages indexed files.
-            # If `client.responses.create` is the *only* way, this MCP tool might need adjustment based on its exact API.
-            # Assume for now Chat Completion on a sufficiently knowledgeable model can access the context,
-            # or that we can manually retrieve snippets if needed (though less ideal).
-             tool_choice="auto", # Let model decide if file search is needed (if implicitly available)
-             # If using Assistants API v2 style (hypothetical within Chat):
-             # tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}}
-             # --- Let's assume file search is implicitly used by the model or not directly callable here ---
-             # We will construct a detailed prompt *using* knowledge from the docs instead.
-
+        # Create an assistant with file search tool enabled
+        assistant = openai_client.beta.assistants.create(
+            name="PyAirbyte Connector Assistant",
+            instructions="You are an expert on Airbyte connectors and PyAirbyte. Use the file search tool to find relevant information about connector configurations, authentication, and best practices.",
+            model="gpt-4o",
+            tools=[{"type": "file_search"}],
+            tool_resources={
+                "file_search": {
+                    "vector_store_ids": [vector_store_id]
+                }
+            }
         )
-        content = response.choices[0].message.content
-        logging.info(f"File search response snippet: {content[:200]}...")
-        return content if content else "No relevant information found."
+
+        # Create a thread
+        thread = openai_client.beta.threads.create()
+
+        # Add the user's query as a message
+        openai_client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=query
+        )
+
+        # Run the assistant
+        run = openai_client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=assistant.id
+        )
+
+        # Wait for completion and get the response
+        import time
+        while run.status in ['queued', 'in_progress']:
+            time.sleep(1)
+            run = openai_client.beta.threads.runs.retrieve(
+                thread_id=thread.id,
+                run_id=run.id
+            )
+
+        if run.status == 'completed':
+            # Get the assistant's response
+            messages = openai_client.beta.threads.messages.list(
+                thread_id=thread.id
+            )
+            
+            # Get the latest assistant message
+            for message in messages.data:
+                if message.role == "assistant":
+                    content = message.content[0].text.value
+                    logging.info(f"File search response snippet: {content[:200]}...")
+                    
+                    # Clean up resources
+                    try:
+                        openai_client.beta.assistants.delete(assistant.id)
+                        openai_client.beta.threads.delete(thread.id)
+                    except Exception as cleanup_error:
+                        logging.warning(f"Failed to cleanup resources: {cleanup_error}")
+                    
+                    return content if content else "No relevant information found."
+        else:
+            error_msg = f"Assistant run failed with status: {run.status}"
+            logging.error(error_msg)
+            return f"Error during file search: {error_msg}"
+
+        return "No response from assistant."
 
     except BadRequestError as e:
-         logging.error(f"OpenAI API Bad Request Error (check model, params, vector store?): {e}")
-         return f"Error during file search: {e}"
+        logging.error(f"OpenAI API Bad Request Error: {e}")
+        return f"Error during file search: {e}"
     except Exception as e:
         logging.error(f"Error during OpenAI file search query: {e}")
         return f"Error during file search: {e}"
@@ -359,7 +472,7 @@ if __name__ == "__main__":
 """
     return full_code
 
-def generate_instructions(source_name: str, destination_name: str, source_config_keys: List[str], dest_config_keys: List[str], output_to_dataframe: bool, generated_code: str) -> str:
+def generate_instructions(source_name: str, destination_name: str, source_config_keys: List[str], dest_config_keys: List[str], output_to_dataframe: bool, generated_code: str, additional_context: str = "") -> str:
     """Generates the setup and usage instructions for the user."""
 
     # Determine dependencies based on output target
@@ -495,31 +608,55 @@ async def generate_pyairbyte_pipeline(
 
     output_to_dataframe = destination_name.lower() == "dataframe"
 
-    # --- Get Config Keys ---
-    # Use helper function to parse catalog (ensure airbyte-connector-catalog.json is accessible)
-    source_config_keys = get_connector_config_keys(source_name, "source")
-    dest_config_keys = []
-    if not output_to_dataframe:
-        dest_config_keys = get_connector_config_keys(destination_name, "destination")
+    # Check if vector store is available
+    if not VECTOR_STORE_ID:
+        error_msg = "VECTOR_STORE_ID not configured. Vector store is required for connector configuration retrieval."
+        logging.error(error_msg)
+        ctx.error(error_msg)
+        return {
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
+        }
 
-    if not source_config_keys:
-         logging.warning(f"Could not determine config keys for source: {source_name}")
-         # Optionally return an error message to the user via the context or return value
-         # ctx.error(f"Failed to get config keys for source '{source_name}'. Check catalog or connector name.")
-         # return {"error": f"Could not find configuration keys for source '{source_name}'. Is the name correct and in the catalog?"}
+    # --- Get Config Keys from Vector Store ---
+    try:
+        ctx.info("Retrieving source connector configuration from vector store...")
+        source_config_keys = await get_connector_config_from_vector_store(
+            source_name, "source", VECTOR_STORE_ID, openai_client
+        )
+        
+        dest_config_keys = []
+        if not output_to_dataframe:
+            ctx.info("Retrieving destination connector configuration from vector store...")
+            dest_config_keys = await get_connector_config_from_vector_store(
+                destination_name, "destination", VECTOR_STORE_ID, openai_client
+            )
+            
+    except Exception as e:
+        error_msg = f"Failed to retrieve connector configuration from vector store: {e}"
+        logging.error(error_msg)
+        ctx.error(error_msg)
+        return {
+            "message": f"Error: {error_msg}",
+            "instructions": error_msg
+        }
 
-    if not output_to_dataframe and not dest_config_keys:
-         logging.warning(f"Could not determine config keys for destination: {destination_name}")
-         # ctx.error(f"Failed to get config keys for destination '{destination_name}'. Check catalog or connector name.")
-         # return {"error": f"Could not find configuration keys for destination '{destination_name}'. Is the name correct and in the catalog?"}
-
-
-    # --- Use File Search for Context (Optional Enhancement) ---
-    # Construct a query to get best practices or specific config nuances
-    # Example: query = f"Provide Python code examples and best practices for configuring PyAirbyte source '{source_name}' and destination '{destination_name}' using environment variables for secrets."
-    # search_context = await query_file_search(query, VECTOR_STORE_ID)
-    # TODO: Integrate 'search_context' into the generation logic below if needed.
-    # For now, the template-based generation is used.
+    # --- Use Vector Search for Additional Context ---
+    try:
+        ctx.info("Gathering additional context and best practices from vector store...")
+        context_query = f"""
+        Provide best practices, common configuration patterns, and important notes for:
+        - Source connector: {source_name}
+        {f'- Destination connector: {destination_name}' if not output_to_dataframe else ''}
+        
+        Include any special authentication requirements, common pitfalls, or configuration tips.
+        """
+        additional_context = await query_file_search(context_query, VECTOR_STORE_ID, openai_client)
+        logging.info(f"Retrieved additional context: {additional_context[:200]}...")
+        
+    except Exception as e:
+        logging.warning(f"Failed to retrieve additional context: {e}")
+        additional_context = "No additional context available."
 
     # --- Generate Code ---
     try:
@@ -536,7 +673,7 @@ async def generate_pyairbyte_pipeline(
 
     # --- Generate Instructions ---
     try:
-        instructions = generate_instructions(source_name, destination_name, source_config_keys, dest_config_keys, output_to_dataframe, generated_code)
+        instructions = generate_instructions(source_name, destination_name, source_config_keys, dest_config_keys, output_to_dataframe, generated_code, additional_context)
     except Exception as e:
         error_msg = f"An internal error occurred during instruction generation: {e}"
         logging.error(f"Error during instruction generation: {e}")
