@@ -125,30 +125,47 @@ def parse_config_keys_from_response(response: str, connector_name: str) -> List[
     # Common patterns to look for in the response
     import re
     
-    # Look for explicit lists of configuration keys
+    logging.info(f"Parsing config keys for {connector_name} from response: {response[:500]}...")
+    
+    # Enhanced patterns to look for configuration keys
     key_patterns = [
-        r'(?:config|configuration|field|parameter|key)(?:s)?[:\s]*["\']?([a-zA-Z_][a-zA-Z0-9_]*)["\']?',
+        # JSON property patterns (for spec responses)
+        r'"([a-zA-Z_][a-zA-Z0-9_]*)":\s*{[^}]*"type"',  # JSON schema properties
+        r'"properties":\s*{[^}]*"([a-zA-Z_][a-zA-Z0-9_]*)"',  # Properties in JSON schema
+        
+        # General configuration patterns
+        r'(?:config|configuration|field|parameter|property|key)(?:s)?[:\s]*["\']?([a-zA-Z_][a-zA-Z0-9_]*)["\']?',
         r'["\']([a-zA-Z_][a-zA-Z0-9_]*)["\'](?:\s*:|\s*=)',
         r'(?:required|needed|necessary)[^:]*:.*?["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']',
         r'environment variable[s]?[:\s]*["\']?([A-Z_][A-Z0-9_]*)["\']?',
-        r'ENV[:\s]*["\']?([A-Z_][A-Z0-9_]*)["\']?'
+        r'ENV[:\s]*["\']?([A-Z_][A-Z0-9_]*)["\']?',
+        
+        # Specific patterns for common field names
+        r'\b(count|seed|host|port|database|username|password|api_key|access_token)\b',
     ]
     
-    # Common configuration field names to look for
+    # Extended list of common configuration field names
     common_fields = [
         'host', 'port', 'database', 'username', 'password', 'api_key', 'access_token',
         'secret_key', 'client_id', 'client_secret', 'token', 'auth_token', 'bearer_token',
         'url', 'endpoint', 'server', 'schema', 'table', 'bucket', 'region', 'account',
         'tenant_id', 'subscription_id', 'project_id', 'dataset_id', 'warehouse',
-        'role', 'authenticator', 'private_key', 'certificate', 'ssl_mode'
+        'role', 'authenticator', 'private_key', 'certificate', 'ssl_mode',
+        # Add source-faker specific fields
+        'count', 'seed'
     ]
     
     # Extract potential keys using patterns
     for pattern in key_patterns:
         matches = re.findall(pattern, response, re.IGNORECASE)
         for match in matches:
-            if len(match) > 1 and match.lower() in [field.lower() for field in common_fields]:
-                config_keys.append(match.upper())
+            if len(match) > 1:
+                # For source-faker, accept count and seed directly
+                if connector_name.lower() == 'source-faker' and match.lower() in ['count', 'seed']:
+                    config_keys.append(match.upper())
+                # For other connectors, check against common fields
+                elif match.lower() in [field.lower() for field in common_fields]:
+                    config_keys.append(match.upper())
     
     # Look for credential-related fields that might be nested
     credential_patterns = [
@@ -163,12 +180,17 @@ def parse_config_keys_from_response(response: str, connector_name: str) -> List[
                 config_keys.append(f"CREDENTIALS_{match.upper()}")
     
     # Remove duplicates and filter out very short or invalid keys
-    config_keys = list(set([key for key in config_keys if len(key) > 2 and key.isalnum() or '_' in key]))
+    config_keys = list(set([key for key in config_keys if len(key) > 1 and (key.isalnum() or '_' in key)]))
+    
+    logging.info(f"Extracted config keys before fallback: {config_keys}")
     
     # If we still don't have keys, try to extract from common connector patterns
     if not config_keys:
+        logging.warning(f"No config keys found in response, using fallback for {connector_name}")
         # Fallback: provide common keys based on connector type
-        if 'postgres' in connector_name.lower():
+        if 'faker' in connector_name.lower():
+            config_keys = ['COUNT', 'SEED']  # Both are optional for source-faker
+        elif 'postgres' in connector_name.lower():
             config_keys = ['HOST', 'PORT', 'DATABASE', 'USERNAME', 'PASSWORD', 'SCHEMA']
         elif 'mysql' in connector_name.lower():
             config_keys = ['HOST', 'PORT', 'DATABASE', 'USERNAME', 'PASSWORD']
@@ -184,6 +206,7 @@ def parse_config_keys_from_response(response: str, connector_name: str) -> List[
             # Generic fallback
             config_keys = ['API_KEY', 'HOST', 'USERNAME', 'PASSWORD']
     
+    logging.info(f"Final config keys for {connector_name}: {config_keys}")
     return config_keys
 
 
@@ -293,17 +316,55 @@ def get_required_env(var_name: str) -> str:
         logging.error(f"Missing required environment variable: {var_name}")
         sys.exit(f"Error: Environment variable '{var_name}' not set. Please add it to your .env file.")
     return value
+
+def get_optional_env(var_name: str, default_value: str = None) -> str:
+    value = os.getenv(var_name)
+    if value is None:
+        if default_value is not None:
+            logging.info(f"Using default value for optional environment variable: {var_name}")
+            return default_value
+        else:
+            logging.info(f"Optional environment variable not set: {var_name}")
+            return None
+    return value
 """
 
     # --- Source Configuration ---
     source_prefix = source_name.upper().replace("-", "_")
-    source_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{source_prefix}_{key}")' for key in source_config_keys if not key.startswith("CREDENTIALS_")])
+    
+    # Handle source-faker specially since its config keys are optional
+    if source_name.lower() == 'source-faker':
+        # For source-faker, all config keys are optional with defaults
+        source_config_vars = []
+        for key in source_config_keys:
+            if not key.startswith("CREDENTIALS_"):
+                if key.lower() == 'count':
+                    source_config_vars.append(f'"{key.lower()}": int(get_optional_env("{source_prefix}_{key}", "1000"))')
+                elif key.lower() == 'seed':
+                    source_config_vars.append(f'"{key.lower()}": int(get_optional_env("{source_prefix}_{key}", "-1"))')
+                else:
+                    source_config_vars.append(f'"{key.lower()}": get_optional_env("{source_prefix}_{key}")')
+        source_config_vars = ",\n            ".join([var for var in source_config_vars if var])
+        
+        # Filter out None values for source-faker
+        source_config_dict = f"""{{k: v for k, v in {{
+            {source_config_vars}
+        }}.items() if v is not None}}"""
+    else:
+        # For other connectors, treat config keys as required
+        source_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{source_prefix}_{key}")' for key in source_config_keys if not key.startswith("CREDENTIALS_")])
+        source_config_dict = f"{source_config_vars}"
+    
     source_cred_vars = ",\n                ".join([f'"{key.replace("CREDENTIALS_", "").lower()}": get_required_env("{source_prefix}_{key}")' for key in source_config_keys if key.startswith("CREDENTIALS_")])
 
     # Structure source config, handling nested 'credentials' if present
-    source_config_dict = f"{source_config_vars}"
     if source_cred_vars:
-        source_config_dict += f',\n            "credentials": {{\n                {source_cred_vars}\n            }}'
+        if source_name.lower() == 'source-faker':
+            source_config_dict = f"""{{**{source_config_dict}, "credentials": {{
+                {source_cred_vars}
+            }}}}"""
+        else:
+            source_config_dict += f',\n            "credentials": {{\n                {source_cred_vars}\n            }}'
 
     source_code = f"""
 # --- Source Configuration ---
@@ -487,9 +548,21 @@ def generate_instructions(source_name: str, destination_name: str, source_config
     source_prefix = source_name.upper().replace("-", "_")
     env_content = "# .env file for PyAirbyte Pipeline\n\n"
     env_content += "# Source Configuration\n"
-    env_content += "# Refer to Airbyte documentation for details on each key for '{}'\n".format(source_name)
-    for key in source_config_keys:
-        env_content += f"{source_prefix}_{key}=YOUR_{source_name.upper()}_{key}\n"
+    
+    # Handle source-faker specially since its config is optional
+    if source_name.lower() == 'source-faker':
+        env_content += "# source-faker configuration (all optional - defaults will be used if not set)\n"
+        for key in source_config_keys:
+            if key.lower() == 'count':
+                env_content += f"# {source_prefix}_{key}=5000  # Number of fake records to generate (default: 1000)\n"
+            elif key.lower() == 'seed':
+                env_content += f"# {source_prefix}_{key}=42   # Random seed for reproducible data (default: -1 for random)\n"
+            else:
+                env_content += f"# {source_prefix}_{key}=YOUR_VALUE\n"
+    else:
+        env_content += "# Refer to Airbyte documentation for details on each key for '{}'\n".format(source_name)
+        for key in source_config_keys:
+            env_content += f"{source_prefix}_{key}=YOUR_{source_name.upper()}_{key}\n"
 
     if not output_to_dataframe:
         dest_prefix = destination_name.upper().replace("-", "_")
