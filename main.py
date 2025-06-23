@@ -581,7 +581,7 @@ async def generate_pyairbyte_pipeline(
         ctx: The MCP Context object (automatically provided).
     """
     logging.info(f"Received request to generate pipeline for Source: {source_name}, Destination: {destination_name}")
-    ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
+    await ctx.info(f"Generating PyAirbyte pipeline: {source_name} -> {destination_name}") # Send status to Cursor UI
 
     # Get OpenAI API key from MCP configuration only
     openai_api_key = os.environ.get("OPENAI_API_KEY")
@@ -620,14 +620,14 @@ async def generate_pyairbyte_pipeline(
 
     # --- Get Config Keys from Vector Store ---
     try:
-        ctx.info("Retrieving source connector configuration from vector store...")
+        await ctx.info("Retrieving source connector configuration from vector store...")
         source_config_keys = await get_connector_config_from_vector_store(
             source_name, "source", VECTOR_STORE_ID, openai_client
         )
         
         dest_config_keys = []
         if not output_to_dataframe:
-            ctx.info("Retrieving destination connector configuration from vector store...")
+            await ctx.info("Retrieving destination connector configuration from vector store...")
             dest_config_keys = await get_connector_config_from_vector_store(
                 destination_name, "destination", VECTOR_STORE_ID, openai_client
             )
@@ -643,7 +643,7 @@ async def generate_pyairbyte_pipeline(
 
     # --- Use Vector Search for Additional Context ---
     try:
-        ctx.info("Gathering additional context and best practices from vector store...")
+        await ctx.info("Gathering additional context and best practices from vector store...")
         context_query = f"""
         Provide best practices, common configuration patterns, and important notes for:
         - Source connector: {source_name}
@@ -685,7 +685,7 @@ async def generate_pyairbyte_pipeline(
 
 
     logging.info("Successfully generated pipeline code and instructions.")
-    ctx.info("Pipeline generation complete.")
+    await ctx.info("Pipeline generation complete.")
 
     # --- Return Result ---
     # Return as a structured dictionary or a single markdown string
