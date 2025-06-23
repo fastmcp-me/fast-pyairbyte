@@ -589,7 +589,7 @@ async def generate_pyairbyte_pipeline(
     if not openai_api_key:
         error_msg = "OPENAI_API_KEY not found. Please configure it in your MCP settings environment variables."
         logging.error(error_msg)
-        ctx.error(error_msg)
+        await ctx.error(error_msg)
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
@@ -600,7 +600,7 @@ async def generate_pyairbyte_pipeline(
     if not openai_client:
         error_msg = "Failed to initialize OpenAI client with provided API key. Please check your API key."
         logging.error(error_msg)
-        ctx.error(error_msg)
+        await ctx.error(error_msg)
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
@@ -612,7 +612,7 @@ async def generate_pyairbyte_pipeline(
     if not VECTOR_STORE_ID:
         error_msg = "VECTOR_STORE_ID not configured. Vector store is required for connector configuration retrieval."
         logging.error(error_msg)
-        ctx.error(error_msg)
+        await ctx.error(error_msg)
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
@@ -635,7 +635,7 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         error_msg = f"Failed to retrieve connector configuration from vector store: {e}"
         logging.error(error_msg)
-        ctx.error(error_msg)
+        await ctx.error(error_msg)
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
@@ -664,7 +664,7 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         error_msg = f"An internal error occurred during code generation: {e}"
         logging.error(f"Error during code generation: {e}")
-        ctx.error(f"Failed to generate Python code: {e}")
+        await ctx.error(f"Failed to generate Python code: {e}")
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
@@ -677,7 +677,7 @@ async def generate_pyairbyte_pipeline(
     except Exception as e:
         error_msg = f"An internal error occurred during instruction generation: {e}"
         logging.error(f"Error during instruction generation: {e}")
-        ctx.error(f"Failed to generate instructions: {e}")
+        await ctx.error(f"Failed to generate instructions: {e}")
         return {
             "message": f"Error: {error_msg}",
             "instructions": error_msg
