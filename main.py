@@ -64,17 +64,17 @@ async def get_connector_config_from_vector_store(connector_name: str, connector_
         logging.error("OpenAI client or Vector Store ID not available for connector config retrieval.")
         raise Exception("Vector store configuration is required but not available.")
 
-    # Construct a specific query for configuration details
+    # Construct a specific query to get the JSON specification with properties
     query = f"""
-    Find the configuration schema and required fields for the Airbyte {connector_type} connector '{connector_name}'.
+    Find the complete JSON specification for the Airbyte {connector_type} connector '{connector_name}'.
     
-    Please provide:
-    1. All required configuration fields/keys
-    2. Authentication/credential fields (if any)
-    3. The exact field names as they appear in the connector specification
-    4. Whether any fields are nested under 'credentials' or other objects
+    I need the exact JSON structure that includes:
+    1. The "spec_oss" or "spec_cloud" section
+    2. The "connectionSpecification" object
+    3. The "properties" object that defines all configuration fields
+    4. The "required" array that lists required fields
     
-    Format the response as a clear list of configuration keys that would be used as environment variables.
+    Please return the actual JSON specification, not just a description. I need to parse the properties to extract configuration field names.
     """
     
     logging.info(f"Querying vector store for {connector_type} connector: {connector_name}")
@@ -87,15 +87,23 @@ async def get_connector_config_from_vector_store(connector_name: str, connector_
             logging.error(f"Vector search failed for {connector_name}: {search_result}")
             raise Exception(f"Failed to retrieve connector configuration from vector store: {search_result}")
         
-        # Parse the search result to extract configuration keys
-        config_keys = parse_config_keys_from_response(search_result, connector_name)
+        # First try to parse JSON from the response to extract properties
+        config_keys = parse_config_keys_from_json_spec(search_result, connector_name)
+        
+        if not config_keys:
+            logging.warning(f"No configuration keys found in JSON spec for {connector_name}, trying text parsing")
+            # Fallback to text parsing
+            config_keys = parse_config_keys_from_response(search_result, connector_name)
         
         if not config_keys:
             logging.warning(f"No configuration keys found for {connector_name} in vector search result")
             # Try a more specific query
-            fallback_query = f"What are the required environment variables and configuration parameters for {connector_name}?"
+            fallback_query = f"Show me the properties section of the connectionSpecification for {connector_name}. Include all field names and their types."
             fallback_result = await query_file_search(fallback_query, vector_store_id, openai_client)
-            config_keys = parse_config_keys_from_response(fallback_result, connector_name)
+            config_keys = parse_config_keys_from_json_spec(fallback_result, connector_name)
+            
+            if not config_keys:
+                config_keys = parse_config_keys_from_response(fallback_result, connector_name)
         
         if not config_keys:
             logging.error(f"Could not extract configuration keys for {connector_name} from vector search")
@@ -107,6 +115,146 @@ async def get_connector_config_from_vector_store(connector_name: str, connector_
     except Exception as e:
         logging.error(f"Error retrieving connector config from vector store: {e}")
         raise
+
+
+def parse_config_keys_from_json_spec(response: str, connector_name: str) -> List[str]:
+    """
+    Parse configuration keys from JSON specification in the response.
+    
+    Args:
+        response: The response text from vector search that may contain JSON spec
+        connector_name: The connector name for context
+        
+    Returns:
+        List of configuration keys extracted from the JSON properties
+    """
+    import re
+    import json
+    
+    config_keys = []
+    
+    logging.info(f"Parsing JSON spec for {connector_name} from response")
+    
+    try:
+        # Try to find JSON blocks in the response
+        json_pattern = r'```json\s*(\{.*?\})\s*```'
+        json_matches = re.findall(json_pattern, response, re.DOTALL)
+        
+        if not json_matches:
+            # Try to find JSON without code blocks - look for connectionSpecification
+            json_pattern = r'("connectionSpecification"\s*:\s*\{.*?\})'
+            json_matches = re.findall(json_pattern, response, re.DOTALL)
+            
+            if json_matches:
+                # Wrap in a proper JSON structure
+                json_matches = ['{' + match + '}' for match in json_matches]
+        
+        if not json_matches:
+            # Try to find any JSON-like structure with properties
+            json_pattern = r'(\{[^{}]*"properties"[^{}]*\{.*?\}.*?\})'
+            json_matches = re.findall(json_pattern, response, re.DOTALL)
+        
+        for json_text in json_matches:
+            try:
+                # Clean up the JSON text
+                json_text = json_text.strip()
+                
+                # Try to parse as JSON
+                spec_data = json.loads(json_text)
+                
+                # Extract properties from the JSON structure
+                properties = None
+                required_fields = []
+                
+                # Look for connectionSpecification.properties
+                if 'connectionSpecification' in spec_data:
+                    conn_spec = spec_data['connectionSpecification']
+                    if 'properties' in conn_spec:
+                        properties = conn_spec['properties']
+                    if 'required' in conn_spec:
+                        required_fields = conn_spec['required']
+                elif 'properties' in spec_data:
+                    properties = spec_data['properties']
+                    if 'required' in spec_data:
+                        required_fields = spec_data['required']
+                
+                if properties:
+                    config_keys.extend(extract_config_keys_from_properties(properties, required_fields, connector_name))
+                    
+            except json.JSONDecodeError as e:
+                logging.warning(f"Failed to parse JSON block: {e}")
+                continue
+                
+    except Exception as e:
+        logging.warning(f"Error parsing JSON spec: {e}")
+    
+    # Remove duplicates and convert to uppercase
+    config_keys = list(set([key.upper() for key in config_keys if key]))
+    
+    logging.info(f"Extracted {len(config_keys)} config keys from JSON spec: {config_keys}")
+    return config_keys
+
+
+def extract_config_keys_from_properties(properties: Dict[str, Any], required_fields: List[str], connector_name: str) -> List[str]:
+    """
+    Extract configuration keys from the properties section of a connector spec.
+    
+    Args:
+        properties: The properties dictionary from the connector spec
+        required_fields: List of required field names
+        connector_name: The connector name for context
+        
+    Returns:
+        List of configuration keys
+    """
+    config_keys = []
+    
+    for prop_name, prop_spec in properties.items():
+        # Skip certain meta properties that aren't configuration
+        if prop_name in ['processing', 'embedding', 'advanced']:
+            continue
+            
+        # Handle nested properties (like indexing, credentials)
+        if isinstance(prop_spec, dict):
+            if 'properties' in prop_spec:
+                # This is a nested object with its own properties
+                nested_keys = extract_config_keys_from_properties(
+                    prop_spec['properties'], 
+                    prop_spec.get('required', []), 
+                    connector_name
+                )
+                
+                # For nested objects, we might want to prefix with the parent name
+                if prop_name.lower() in ['credentials', 'auth', 'authentication']:
+                    config_keys.extend([f"CREDENTIALS_{key}" for key in nested_keys])
+                else:
+                    config_keys.extend(nested_keys)
+                    
+            elif 'oneOf' in prop_spec:
+                # Handle oneOf schemas (like embedding options)
+                for option in prop_spec['oneOf']:
+                    if 'properties' in option:
+                        nested_keys = extract_config_keys_from_properties(
+                            option['properties'],
+                            option.get('required', []),
+                            connector_name
+                        )
+                        if prop_name.lower() in ['credentials', 'auth', 'authentication']:
+                            config_keys.extend([f"CREDENTIALS_{key}" for key in nested_keys])
+                        else:
+                            config_keys.extend(nested_keys)
+            else:
+                # This is a direct configuration field
+                # Check if it's a secret field
+                if prop_spec.get('airbyte_secret', False):
+                    if prop_name.lower() in ['password', 'token', 'key', 'secret']:
+                        config_keys.append(prop_name)
+                    else:
+                        config_keys.append(f"CREDENTIALS_{prop_name}")
+                else:
+                    config_keys.append(prop_name)
+    
+    return config_keys
 
 
 def parse_config_keys_from_response(response: str, connector_name: str) -> List[str]:
