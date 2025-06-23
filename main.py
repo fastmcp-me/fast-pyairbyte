@@ -296,8 +296,9 @@ def get_required_env(var_name: str) -> str:
 """
 
     # --- Source Configuration ---
-    source_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{key}")' for key in source_config_keys if not key.startswith("CREDENTIALS_")])
-    source_cred_vars = ",\n                ".join([f'"{key.replace("CREDENTIALS_", "").lower()}": get_required_env("{key}")' for key in source_config_keys if key.startswith("CREDENTIALS_")])
+    source_prefix = source_name.upper().replace("-", "_")
+    source_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{source_prefix}_{key}")' for key in source_config_keys if not key.startswith("CREDENTIALS_")])
+    source_cred_vars = ",\n                ".join([f'"{key.replace("CREDENTIALS_", "").lower()}": get_required_env("{source_prefix}_{key}")' for key in source_config_keys if key.startswith("CREDENTIALS_")])
 
     # Structure source config, handling nested 'credentials' if present
     source_config_dict = f"{source_config_vars}"
@@ -384,8 +385,9 @@ else:
 """
         imports = "import airbyte as ab\nimport pandas as pd"
     else:
-        dest_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{key}")' for key in dest_config_keys if not key.startswith("CREDENTIALS_")])
-        dest_cred_vars = ",\n                ".join([f'"{key.replace("CREDENTIALS_", "").lower()}": get_required_env("{key}")' for key in dest_config_keys if key.startswith("CREDENTIALS_")])
+        dest_prefix = destination_name.upper().replace("-", "_")
+        dest_config_vars = ",\n            ".join([f'"{key.lower()}": get_required_env("{dest_prefix}_{key}")' for key in dest_config_keys if not key.startswith("CREDENTIALS_")])
+        dest_cred_vars = ",\n                ".join([f'"{key.replace("CREDENTIALS_", "").lower()}": get_required_env("{dest_prefix}_{key}")' for key in dest_config_keys if key.startswith("CREDENTIALS_")])
 
         # Structure dest config, handling nested 'credentials' if present
         dest_config_dict = f"{dest_config_vars}"
@@ -481,18 +483,20 @@ def generate_instructions(source_name: str, destination_name: str, source_config
         dependencies.append("pandas")
     deps_string = " ".join(dependencies)
 
-    # Create .env content placeholders
+    # Create .env content placeholders with prefixed names
+    source_prefix = source_name.upper().replace("-", "_")
     env_content = "# .env file for PyAirbyte Pipeline\n\n"
     env_content += "# Source Configuration\n"
     env_content += "# Refer to Airbyte documentation for details on each key for '{}'\n".format(source_name)
     for key in source_config_keys:
-        env_content += f"{key}=YOUR_{source_name.upper()}_{key}\n"
+        env_content += f"{source_prefix}_{key}=YOUR_{source_name.upper()}_{key}\n"
 
     if not output_to_dataframe:
+        dest_prefix = destination_name.upper().replace("-", "_")
         env_content += "\n# Destination Configuration\n"
         env_content += "# Refer to Airbyte documentation for details on each key for '{}'\n".format(destination_name)
         for key in dest_config_keys:
-            env_content += f"{key}=YOUR_{destination_name.upper()}_{key}\n"
+            env_content += f"{dest_prefix}_{key}=YOUR_{destination_name.upper()}_{key}\n"
     else:
          env_content += "\n# No destination secrets needed when outputting to DataFrame\n"
 
