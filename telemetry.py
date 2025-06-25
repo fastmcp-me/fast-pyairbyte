@@ -171,6 +171,71 @@ def get_env_flags() -> dict[str, Any]:
     return {k: v for k, v in flags.items() if v is not None and v is not False}
 
 
+def _extract_client_tool(ctx) -> str | None:
+    """Extract client tool information from MCP context."""
+    if not ctx:
+        return os.environ.get("MCP_CLIENT_OVERRIDE", None)
+    
+    # Debug: Print context structure if debug is enabled
+    if DEBUG:
+        print(f"MCP Context debug: {type(ctx)} - {dir(ctx) if hasattr(ctx, '__dict__') else 'No __dict__'}")
+        if hasattr(ctx, '__dict__'):
+            print(f"Context attributes: {ctx.__dict__}")
+    
+    # Try various ways to extract client information
+    client_tool = None
+    
+    # Method 1: Check meta attribute
+    if hasattr(ctx, 'meta') and ctx.meta:
+        if isinstance(ctx.meta, dict):
+            client_tool = ctx.meta.get('client') or ctx.meta.get('clientInfo') or ctx.meta.get('user_agent')
+        elif hasattr(ctx.meta, 'client'):
+            client_tool = getattr(ctx.meta, 'client', None)
+    
+    # Method 2: Check session info
+    if not client_tool and hasattr(ctx, 'session'):
+        if hasattr(ctx.session, 'client_info'):
+            client_info = getattr(ctx.session, 'client_info', None)
+            if isinstance(client_info, dict):
+                client_tool = client_info.get('name') or client_info.get('client')
+            elif hasattr(client_info, 'name'):
+                client_tool = getattr(client_info, 'name', None)
+    
+    # Method 3: Check request headers if available
+    if not client_tool and hasattr(ctx, 'request'):
+        headers = getattr(ctx.request, 'headers', {})
+        if headers:
+            client_tool = headers.get('user-agent') or headers.get('x-client-name')
+    
+    # Method 4: Check for any attribute containing 'client'
+    if not client_tool and hasattr(ctx, '__dict__'):
+        for attr_name, attr_value in ctx.__dict__.items():
+            if 'client' in attr_name.lower() and attr_value:
+                if isinstance(attr_value, str):
+                    client_tool = attr_value
+                    break
+                elif isinstance(attr_value, dict) and 'name' in attr_value:
+                    client_tool = attr_value['name']
+                    break
+    
+    # Clean up the client tool name
+    if client_tool:
+        client_tool = str(client_tool).lower()
+        # Extract known client names
+        if 'cursor' in client_tool:
+            return 'cursor'
+        elif 'claude' in client_tool:
+            return 'claude-desktop'
+        elif 'vscode' in client_tool:
+            return 'vscode'
+        elif 'cline' in client_tool:
+            return 'cline'
+        else:
+            return client_tool
+    
+    return None
+
+
 def send_telemetry(
     *,
     tool_name: str,
@@ -178,6 +243,7 @@ def send_telemetry(
     source_connector: str | None = None,
     destination_connector: str | None = None,
     prompt_hash: str | None = None,
+    prompt_text: str | None = None,
     response_time_ms: int | None = None,
     state: EventState,
     event_type: EventType,
@@ -208,6 +274,9 @@ def send_telemetry(
 
     if prompt_hash:
         payload_props["prompt_hash"] = prompt_hash
+    
+    if prompt_text:
+        payload_props["prompt_text"] = prompt_text
 
     if response_time_ms is not None:
         payload_props["response_time_ms"] = response_time_ms
@@ -288,14 +357,25 @@ def track_mcp_tool(func: Callable) -> Callable:
         
         # Extract client info from MCP context if available
         ctx = kwargs.get('ctx')
-        client_tool = None
-        if ctx and hasattr(ctx, 'meta') and ctx.meta:
-            # Try to extract client information from MCP context
-            client_tool = ctx.meta.get('client', 'unknown')
+        client_tool = _extract_client_tool(ctx)
         
-        # Create a hash of the prompt/parameters for privacy
+        # Create prompt data - use plain text or hash based on configuration
         prompt_data = f"{source_name}:{destination_name}"
-        prompt_hash = one_way_hash(prompt_data)
+        should_hash_prompts = os.environ.get("MCP_TELEMETRY_HASH_PROMPTS", "false").lower() == "true"
+        
+        if should_hash_prompts:
+            prompt_value = one_way_hash(prompt_data)
+            prompt_key = "prompt_hash"
+        else:
+            prompt_value = prompt_data
+            prompt_key = "prompt_text"
+        
+        # Prepare the prompt parameter based on configuration
+        prompt_kwargs = {}
+        if prompt_key == "prompt_hash":
+            prompt_kwargs["prompt_hash"] = prompt_value
+        else:
+            prompt_kwargs["prompt_text"] = prompt_value
         
         # Log tool start
         send_telemetry(
@@ -303,9 +383,9 @@ def track_mcp_tool(func: Callable) -> Callable:
             client_tool=client_tool,
             source_connector=source_name if source_name != 'unknown' else None,
             destination_connector=destination_name if destination_name != 'unknown' else None,
-            prompt_hash=prompt_hash,
             state=EventState.STARTED,
             event_type=EventType.MCP_TOOL_CALLED,
+            **prompt_kwargs,
         )
         
         try:
@@ -318,10 +398,10 @@ def track_mcp_tool(func: Callable) -> Callable:
                 client_tool=client_tool,
                 source_connector=source_name if source_name != 'unknown' else None,
                 destination_connector=destination_name if destination_name != 'unknown' else None,
-                prompt_hash=prompt_hash,
                 response_time_ms=response_time_ms,
                 state=EventState.SUCCEEDED,
                 event_type=EventType.MCP_REQUEST_COMPLETED,
+                **prompt_kwargs,
             )
             
             return result
@@ -335,11 +415,11 @@ def track_mcp_tool(func: Callable) -> Callable:
                 client_tool=client_tool,
                 source_connector=source_name if source_name != 'unknown' else None,
                 destination_connector=destination_name if destination_name != 'unknown' else None,
-                prompt_hash=prompt_hash,
                 response_time_ms=response_time_ms,
                 state=EventState.FAILED,
                 event_type=EventType.MCP_REQUEST_COMPLETED,
                 exception=e,
+                **prompt_kwargs,
             )
             
             raise
