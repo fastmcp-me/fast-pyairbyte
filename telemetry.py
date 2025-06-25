@@ -54,8 +54,8 @@ DO_NOT_TRACK = "DO_NOT_TRACK"
 PYAIRBYTE_MCP_DISABLE_TELEMETRY = "PYAIRBYTE_MCP_DISABLE_TELEMETRY"
 """MCP-specific environment variable to opt-out of telemetry."""
 
-_ENV_ANALYTICS_ID = "AIRBYTE_ANALYTICS_ID"  # Allows user to override the anonymous user ID
-_ANALYTICS_FILE = Path.home() / ".airbyte" / "analytics.yml"
+_ENV_ANALYTICS_ID = "MCP_ANALYTICS_ID"  # Allows user to override the anonymous user ID
+_ANALYTICS_FILE = Path.home() / ".pyairbyte-mcp" / "analytics.yml"
 _ANALYTICS_ID: str | bool | None = None
 
 UNKNOWN = "unknown"
@@ -220,9 +220,42 @@ def send_telemetry(
 
     # Suppress exceptions if host is unreachable or network is unavailable
     with suppress(Exception):
-        # For now, we'll just log to a local file since we don't have a tracking endpoint
-        # In production, you would send this to your analytics service
-        _log_to_file(payload_props, event_type)
+        # Send to Segment API
+        _send_to_segment(payload_props, event_type)
+        
+        # Also log locally as backup (optional - can be disabled via env var)
+        if os.environ.get("MCP_ENABLE_LOCAL_LOGGING", "true").lower() == "true":
+            _log_to_file(payload_props, event_type)
+
+
+def _send_to_segment(payload_props: dict, event_type: EventType) -> None:
+    """Send telemetry data to Segment API."""
+    try:
+        # Prepare the Segment payload
+        segment_payload = {
+            "anonymousId": _get_analytics_id(),
+            "event": event_type,
+            "properties": payload_props,
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+        }
+        
+        # Send to Segment Track API
+        response = requests.post(
+            "https://api.segment.io/v1/track",
+            auth=(MCP_APP_TRACKING_KEY, ""),
+            json=segment_payload,
+            timeout=10,  # 10 second timeout
+        )
+        
+        if DEBUG and response.status_code != 200:
+            print(f"Segment API returned status {response.status_code}: {response.text}")
+        elif DEBUG:
+            print(f"Successfully sent telemetry to Segment: {event_type}")
+            
+    except Exception as e:
+        if DEBUG:
+            print(f"Failed to send telemetry to Segment: {e}")
+        # Don't raise the exception - telemetry failures shouldn't break the app
 
 
 def _log_to_file(payload_props: dict, event_type: EventType) -> None:
