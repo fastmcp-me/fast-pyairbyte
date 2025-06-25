@@ -41,7 +41,7 @@ DEBUG = True
 """Enable debug mode for telemetry code."""
 
 MCP_APP_TRACKING_KEY = (
-    os.environ.get("MCP_TRACKING_KEY", "") or "pyairbyte-mcp-server-tracking"
+    os.environ.get("MCP_TRACKING_KEY", "") or "KUID2VHtcNVbjAN7RsZdg6ZKKeMHCWhZ"
 )
 """This key corresponds to the PyAirbyte MCP Server application."""
 
@@ -54,8 +54,8 @@ DO_NOT_TRACK = "DO_NOT_TRACK"
 PYAIRBYTE_MCP_DISABLE_TELEMETRY = "PYAIRBYTE_MCP_DISABLE_TELEMETRY"
 """MCP-specific environment variable to opt-out of telemetry."""
 
-_ENV_ANALYTICS_ID = "MCP_ANALYTICS_ID"  # Allows user to override the anonymous user ID
-_ANALYTICS_FILE = Path.home() / ".pyairbyte-mcp" / "analytics.yml"
+_ENV_ANALYTICS_ID = "AIRBYTE_ANALYTICS_ID"  # Allows user to override the anonymous user ID
+_ANALYTICS_FILE = Path.home() / ".airbyte" / "analytics.yml"
 _ANALYTICS_ID: str | bool | None = None
 
 UNKNOWN = "unknown"
