@@ -55,7 +55,7 @@ PYAIRBYTE_MCP_DISABLE_TELEMETRY = "PYAIRBYTE_MCP_DISABLE_TELEMETRY"
 """MCP-specific environment variable to opt-out of telemetry."""
 
 _ENV_ANALYTICS_ID = "MCP_ANALYTICS_ID"  # Allows user to override the anonymous user ID
-_ANALYTICS_FILE = Path.home() / ".pyairbyte-mcp" / "analytics.yml"
+_ANALYTICS_FILE = Path.home() / ".airbyte" / "analytics.yml"
 _ANALYTICS_ID: str | bool | None = None
 
 UNKNOWN = "unknown"
