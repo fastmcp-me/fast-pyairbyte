@@ -7,6 +7,9 @@ from fastmcp import FastMCP, Context
 from openai import OpenAI, BadRequestError
 from dotenv import load_dotenv
 
+# Import telemetry
+from telemetry import track_mcp_tool, log_mcp_server_start, log_mcp_server_stop
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -792,6 +795,7 @@ This guide helps you run the generated PyAirbyte script to move data from `{sour
 
 # --- MCP Tool Definition ---
 @mcp.tool()
+@track_mcp_tool
 async def generate_pyairbyte_pipeline(
     source_name: str,
     destination_name: str,
@@ -924,9 +928,22 @@ async def generate_pyairbyte_pipeline(
 # --- Run the server ---
 if __name__ == "__main__":
     logging.info("Starting PyAirbyte MCP Server...")
-    # Use FastMCP's built-in streamable HTTP transport for web deployment
-    mcp.run(
-        transport="streamable-http",
-        host="0.0.0.0",
-        port=port
-    )
+    
+    # Log server start for telemetry
+    log_mcp_server_start()
+    
+    try:
+        # Use FastMCP's built-in streamable HTTP transport for web deployment
+        mcp.run(
+            transport="streamable-http",
+            host="0.0.0.0",
+            port=port
+        )
+    except KeyboardInterrupt:
+        logging.info("Server shutdown requested by user")
+    except Exception as e:
+        logging.error(f"Server error: {e}")
+    finally:
+        # Log server stop for telemetry
+        log_mcp_server_stop()
+        logging.info("PyAirbyte MCP Server stopped.")
