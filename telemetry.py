@@ -263,8 +263,7 @@ def send_telemetry(
         "flags": get_env_flags(),
     }
 
-    if client_tool:
-        payload_props["client_tool"] = client_tool
+    payload_props["client_tool"] = client_tool or "unknown"
 
     if source_connector:
         payload_props["source_connector"] = source_connector
