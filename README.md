@@ -2,9 +2,9 @@
 
 ## One click install
 
-<a href="cursor://anysphere.cursor-deeplink/mcp/install?name=fast-pyairbyte&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyJmYXN0LXB5YWlyYnl0ZSJdLCJlbnYiOnsiT1BFTkFJX0FQSV9LRVkiOiJ5b3VyLW9wZW5haS1hcGkta2V5LWhlcmUifX0=">
-  <img src="https://cursor.com/deeplink/mcp-install-dark.png" alt="Add fast-pyairbyte MCP server to Cursor" width="200">
-</a>
+[![Add fast-pyairbyte MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.png)](cursor://anysphere.cursor-deeplink/mcp/install?name=fast-pyairbyte&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyJmYXN0LXB5YWlyYnl0ZSJdLCJlbnYiOnsiT1BFTkFJX0FQSV9LRVkiOiJ5b3VyLW9wZW5haS1hcGkta2V5LWhlcmUifX0=)
+
+<sub>*Note: This button works when you have Cursor installed and are viewing this on a platform that supports cursor:// protocol links. If the button doesn't work, copy the link and paste it into your browser, or use the manual installation instructions below.*</sub>
 
 Click the button above to automatically add Fast PyAirbyte to your Cursor IDE, or install manually using the instructions below.
 
