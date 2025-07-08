@@ -2,7 +2,7 @@
 
 ## One click install
 
-[![Add to Cursor](https://cursor.directory/add-to-cursor.svg)](https://cursor.directory/add?name=fast-pyairbyte&description=AI-powered%20PyAirbyte%20pipeline%20generator&command=npx&args=%5B%22fast-pyairbyte%22%5D&env=%7B%22OPENAI_API_KEY%22%3A%22your-openai-api-key-here%22%7D)
+[![Add fast-pyairbyte MCP server to Cursor](https://cursor.com/deeplink/mcp-install-light.png)](cursor://anysphere.cursor-deeplink/mcp/install?name=fast-pyairbyte&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyJmYXN0LXB5YWlyYnl0ZSJdLCJlbnYiOnsiT1BFTkFJX0FQSV9LRVkiOiJ5b3VyLW9wZW5haS1hcGkta2V5LWhlcmUifX0=)
 
 Click the button above to automatically add Fast PyAirbyte to your Cursor IDE, or install manually using the instructions below.
 
