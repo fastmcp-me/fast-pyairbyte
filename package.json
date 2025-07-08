@@ -1,0 +1,49 @@
+{
+  "name": "fast-pyairbyte",
+  "version": "1.0.9",
+  "description": "Fast PyAirbyte - Generate data pipelines as code using PyAirbyte and AI",
+  "main": "bin/fast-pyairbyte.js",
+  "bin": {
+    "fast-pyairbyte": "./bin/fast-pyairbyte.js"
+  },
+  "scripts": {
+    "start": "node bin/fast-pyairbyte.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "echo \"Preparing for publish...\""
+  },
+  "keywords": [
+    "airbyte",
+    "pyairbyte",
+    "mcp",
+    "model-context-protocol",
+    "data-pipeline",
+    "etl",
+    "data-integration"
+  ],
+  "author": "Airbyte Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quintonwall/pyairbyte-mcp-npx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/quintonwall/pyairbyte-mcp-npx/issues"
+  },
+  "homepage": "https://github.com/quintonwall/pyairbyte-mcp-npx#readme",
+  "files": [
+    "bin/",
+    "python/",
+    "README.md",
+    "docs/"
+  ],
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "preferGlobal": false,
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ]
+}

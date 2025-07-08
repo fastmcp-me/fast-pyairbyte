@@ -1,0 +1,8 @@
+fastmcp>=2.8.0
+openai
+python-dotenv
+pandas
+uvicorn
+requests
+ulid-py
+PyYAML
