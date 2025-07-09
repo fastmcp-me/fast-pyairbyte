@@ -265,8 +265,8 @@ npm publish
 
 ### Getting Help
 
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/quintonwall/pyairbyte-mcp-npx/issues)
-- **Discussions**: Join the conversation on [GitHub Discussions](https://github.com/quintonwall/pyairbyte-mcp-npx/discussions)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/quintonwall/fast-pyairbyte/issues)
+- **Discussions**: Join the conversation on [GitHub Discussions](https://github.com/quintonwall/fast-pyairbyte/discussions)
 - **Slack**: Ask questions in the [Airbyte Slack](https://airbytehq.slack.com/archives/C091PCA614N)
 
 ---

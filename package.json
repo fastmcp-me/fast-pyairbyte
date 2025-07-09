@@ -1,6 +1,6 @@
 {
   "name": "fast-pyairbyte",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Fast PyAirbyte - Generate data pipelines as code using PyAirbyte and AI",
   "main": "bin/fast-pyairbyte.js",
   "bin": {
@@ -20,16 +20,16 @@
     "etl",
     "data-integration"
   ],
-  "author": "Airbyte Labs",
+  "author": "Quinton Wall",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/quintonwall/pyairbyte-mcp-npx.git"
+    "url": "https://github.com/quintonwall/fast-airbyte.git"
   },
   "bugs": {
-    "url": "https://github.com/quintonwall/pyairbyte-mcp-npx/issues"
+    "url": "https://github.com/quintonwall/fast-airbyte/issues"
   },
-  "homepage": "https://github.com/quintonwall/pyairbyte-mcp-npx#readme",
+  "homepage": "https://github.com/quintonwall/fast-airbyte#readme",
   "files": [
     "bin/",
     "python/",
