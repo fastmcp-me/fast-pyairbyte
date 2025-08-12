@@ -1,4 +1,7 @@
 # Fast PyAirbyte
+Fast-PyAirbyte lets you generate a data pipeline as code, for any Airbyte Connector, using a single prompt:
+
+"create a data pipeline from source-xxx to destination-xxx"
 
 ## One click install
 
