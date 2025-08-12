@@ -29,7 +29,11 @@ This will:
 
 ## What is Fast PyAirbyte?
 
-Fast PyAirbyte is an AI-powered tool that generates PyAirbyte pipeline code and instructions. It leverages OpenAI and connector documentation to help users quickly scaffold and configure data pipelines between sources and destinations supported by Airbyte. The MCP server automates code generation, provides context-aware guidance, and streamlines the process of building and deploying data pipelines.
+Fast-PyAirbyte lets you generate a data pipeline as code, for any Airbyte Connector, using a single prompt:
+
+"create a data pipeline from source-xxx to destination-xxx"
+
+It leverages OpenAI and connector documentation to help users quickly scaffold and configure data pipelines between sources and destinations supported by Airbyte. The MCP server automates code generation, provides context-aware guidance, and streamlines the process of building and deploying data pipelines.
 
 - **Generates PyAirbyte pipeline code** based on user instructions and connector documentation
 - **Uses OpenAI and file search** to provide context-aware code and instructions  
